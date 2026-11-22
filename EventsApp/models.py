@@ -23,6 +23,11 @@ class Evenements(models.Model):
     )
     start_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(auto_now_add=True)
+    type_evenement = models.CharField(
+        choices=[("online", "Online"), ("onsite", "OnSite")],
+        max_length=200,
+        default="online",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     participants = models.ForeignKey("UsersApp.Utilisateur", on_delete=models.CASCADE)
