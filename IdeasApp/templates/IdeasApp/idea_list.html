@@ -1,0 +1,36 @@
+{% extends 'IdeasApp/base.html' %}
+{% block title %}Mes idées{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Mes idées</h1>
+    <a class="btn btn-primary" href="{% url 'ideas:idea_create' %}">+ Soumettre une idée</a>
+</div>
+
+<div class="card shadow-sm">
+    <table class="table table-striped table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr><th>Titre</th><th>Type</th><th>Statut</th><th>Date</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        {% for idea in ideas %}
+            <tr>
+                <td><a href="{% url 'ideas:idea_detail' idea.pk %}">{{ idea.title }}</a></td>
+                <td>{{ idea.get_type_display }}</td>
+                <td>
+                    <span class="badge {% if idea.status == 'accepted' %}text-bg-success{% elif idea.status == 'rejected' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">
+                        {{ idea.get_status_display }}
+                    </span>
+                </td>
+                <td>{{ idea.created_at|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'ideas:idea_update' idea.pk %}">Modifier</a>
+                    <a class="btn btn-sm btn-outline-danger" href="{% url 'ideas:idea_delete' idea.pk %}">Supprimer</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-center text-muted">Aucune idée soumise pour le moment.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'IdeasApp/base.html' %}
+{% block title %}{{ idea.title }}{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h1 class="h4">{{ idea.title }}</h1>
+        <p class="mb-1"><strong>Type :</strong> {{ idea.get_type_display }}</p>
+        <p class="mb-1"><strong>Statut :</strong>
+            <span class="badge {% if idea.status == 'accepted' %}text-bg-success{% elif idea.status == 'rejected' %}text-bg-danger{% else %}text-bg-secondary{% endif %}">{{ idea.get_status_display }}</span>
+        </p>
+        <p class="mb-3"><strong>Soumise le :</strong> {{ idea.created_at|date:"d/m/Y H:i" }}</p>
+        <div class="mb-3">{{ idea.content|linebreaks }}</div>
+        <a class="btn btn-primary" href="{% url 'ideas:idea_update' idea.pk %}">Modifier</a>
+        <a class="btn btn-secondary" href="{% url 'ideas:idea_list' %}">Retour</a>
+    </div>
+</div>
+{% endblock %}

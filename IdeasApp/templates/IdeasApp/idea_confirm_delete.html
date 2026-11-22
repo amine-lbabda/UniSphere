@@ -1,0 +1,15 @@
+{% extends 'IdeasApp/base.html' %}
+{% block title %}Supprimer l'idée{% endblock %}
+{% block content %}
+<div class="card shadow-sm border-danger">
+    <div class="card-body">
+        <h1 class="h4">Supprimer l'idée</h1>
+        <p>Voulez-vous vraiment supprimer « {{ idea.title }} » ?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+            <a class="btn btn-secondary" href="{% url 'ideas:idea_list' %}">Annuler</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
