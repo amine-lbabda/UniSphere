@@ -79,3 +79,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "courses:role_home"
 LOGOUT_REDIRECT_URL = "courses:front_home"
+
+AUTHENTICATION_BACKENDS = [
+    "courses.backends.UniSphereBackend",
+]

@@ -1,82 +1,131 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Créer un compte étudiant — UniSphere{% endblock %}
+{% block title %}Inscription étudiant — UniSphere{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="login-page">
-  <div class="login-card reveal" style="width:min(520px,100%);">
-    <div class="brand" style="margin-bottom:1rem;">
-      <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere" class="brand-logo">
-      <span>UniSphere</span>
+<div class="auth-shell">
+  <aside class="auth-visual">
+    <div class="auth-orb o1"></div>
+    <div class="auth-orb o2"></div>
+    <div class="auth-orb o3"></div>
+    <a href="{% url 'courses:front_home' %}" class="auth-visual-brand">
+      <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere">
+      <strong>UniSphere</strong>
+    </a>
+    <div class="auth-visual-copy">
+      <span class="eyebrow">Inscription ESPRIT</span>
+      <h1>Rejoignez<br><em>votre parcours.</em></h1>
+      <p>Réservé aux étudiants. Email institutionnel <strong>@esprit.tn</strong> obligatoire. Les enseignants sont ajoutés par l’admin.</p>
     </div>
-    <h1>Inscription étudiant</h1>
-    <p class="sub">Choisissez votre filière puis votre année / spécialité — les modules correspondants vous seront affectés automatiquement.</p>
+    <div class="auth-visual-foot">
+      <span>1 compte</span>
+      <span>1 filière</span>
+      <span>Modules auto</span>
+    </div>
+  </aside>
 
-    <form method="post" id="signup-form">
-      {% csrf_token %}
+  <section class="auth-panel">
+    <div class="auth-card wide">
+      <div class="auth-card-top">
+        <h2>Créer mon compte</h2>
+        <p>Étudiant uniquement — quelques secondes pour démarrer.</p>
+      </div>
+
+      <div class="auth-steps" aria-hidden="true">
+        <span class="on"><i></i></span>
+        <span><i></i></span>
+        <span><i></i></span>
+      </div>
+
       {% if form.non_field_errors %}
-      <div class="alert alert-error" style="position:static;margin-bottom:1rem;box-shadow:none;">{{ form.non_field_errors }}</div>
+      <div class="auth-alert error">{{ form.non_field_errors }}</div>
       {% endif %}
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="{{ form.first_name.id_for_label }}">Prénom</label>
-          {{ form.first_name }}
-          {{ form.first_name.errors }}
-        </div>
-        <div class="form-group">
-          <label for="{{ form.last_name.id_for_label }}">Nom</label>
-          {{ form.last_name }}
-          {{ form.last_name.errors }}
-        </div>
-      </div>
+      <form method="post" id="signup-form" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
 
-      <div class="form-group">
-        <label for="{{ form.username.id_for_label }}">Identifiant</label>
-        {{ form.username }}
-        {{ form.username.errors }}
-      </div>
-      <div class="form-group">
-        <label for="{{ form.email.id_for_label }}">Email</label>
-        {{ form.email }}
-        {{ form.email.errors }}
-      </div>
-      <div class="form-group">
-        <label for="{{ form.student_id.id_for_label }}">Matricule</label>
-        {{ form.student_id }}
-      </div>
-
-      <div class="form-group">
-        <label for="id_filiere">Filière</label>
-        {{ form.filiere }}
-        <p class="help">Informatique · Électromécanique · Génie Civil</p>
-      </div>
-      <div class="form-group">
-        <label for="id_academic_level">Année / spécialité</label>
-        {{ form.academic_level }}
-        {{ form.academic_level.errors }}
-        <p class="help">Ex. 1A/2A (TC), 3IA, 4A-Fintech, 1EM…4EM-OGI, 1GC…5GC</p>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="{{ form.password1.id_for_label }}">Mot de passe</label>
-          {{ form.password1 }}
-          {{ form.password1.errors }}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.first_name.id_for_label }}">Prénom</label>
+            {{ form.first_name }}
+            {{ form.first_name.errors }}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.last_name.id_for_label }}">Nom</label>
+            {{ form.last_name }}
+            {{ form.last_name.errors }}
+          </div>
         </div>
-        <div class="form-group">
-          <label for="{{ form.password2.id_for_label }}">Confirmation</label>
-          {{ form.password2 }}
-          {{ form.password2.errors }}
-        </div>
-      </div>
 
-      <button type="submit" class="btn btn-primary btn-glow" style="width:100%;margin-top:0.5rem;">Créer mon compte</button>
-    </form>
-    <p style="margin:1.1rem 0 0;text-align:center;font-size:0.9rem;color:var(--slate);">
-      Déjà inscrit ? <a href="{% url 'login' %}">Connexion</a>
-    </p>
-  </div>
+        <div class="form-group">
+          <label for="{{ form.username.id_for_label }}">Identifiant</label>
+          {{ form.username }}
+          {{ form.username.errors }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.email.id_for_label }}">Email ESPRIT *</label>
+          {{ form.email }}
+          <p class="help">Format obligatoire : prenom.nom@esprit.tn</p>
+          {{ form.email.errors }}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.student_id.id_for_label }}">Matricule</label>
+            {{ form.student_id }}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.phone.id_for_label }}">Téléphone</label>
+            {{ form.phone }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.photo.id_for_label }}">Photo de profil</label>
+          <div class="auth-photo">{{ form.photo }}</div>
+          {{ form.photo.errors }}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="id_filiere">Filière</label>
+            {{ form.filiere }}
+          </div>
+          <div class="form-group">
+            <label for="id_academic_level">Année / spécialité</label>
+            {{ form.academic_level }}
+            {{ form.academic_level.errors }}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.password1.id_for_label }}">Mot de passe</label>
+            {{ form.password1 }}
+            {{ form.password1.errors }}
+          </div>
+          <div class="form-group">
+            <label for="{{ form.password2.id_for_label }}">Confirmation</label>
+            {{ form.password2 }}
+            {{ form.password2.errors }}
+          </div>
+        </div>
+
+        <button type="submit" class="auth-btn">Créer mon compte étudiant</button>
+      </form>
+
+      <div class="auth-foot">
+        Déjà un compte ?
+        <a href="{% url 'login' %}">Se connecter</a>
+        <span class="hint">Enseignant ? Demandez la création de compte à l’administrateur.</span>
+      </div>
+    </div>
+  </section>
 </div>
 {% endblock %}
 
@@ -85,6 +134,7 @@
 const PROGRAMS = {{ programs_json|safe }};
 const filiere = document.getElementById("id_filiere");
 const program = document.getElementById("id_academic_level");
+const steps = document.querySelectorAll(".auth-steps span");
 
 function refillPrograms() {
   const key = filiere.value;
@@ -98,8 +148,19 @@ function refillPrograms() {
     if (code === current) opt.selected = true;
     program.appendChild(opt);
   });
+  if (steps[2]) steps[2].classList.add("on");
 }
 filiere.addEventListener("change", refillPrograms);
 refillPrograms();
+
+const form = document.getElementById("signup-form");
+form?.addEventListener("input", () => {
+  const filled = [...form.querySelectorAll("input, select")].filter(
+    (el) => el.type !== "file" && el.type !== "hidden" && el.value
+  ).length;
+  if (filled > 3 && steps[0]) steps[0].classList.add("on");
+  if (filled > 6 && steps[1]) steps[1].classList.add("on");
+  if (filled > 9 && steps[2]) steps[2].classList.add("on");
+});
 </script>
 {% endblock %}

@@ -1,8 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import Category, Choice, Course, Question, Quiz, Resource, UserProfile
+from .roles import get_profile
 from .programs import (
     DEPARTMENT_SLUGS,
     Filiere,
@@ -269,6 +270,85 @@ class CourseFilterForm(forms.Form):
         ]
 
 
+class UniSphereLoginForm(AuthenticationForm):
+    """Connexion unifiée étudiant / enseignant / admin + message compte désactivé."""
+
+    account_type = forms.ChoiceField(
+        label="Je me connecte en tant que",
+        choices=(
+            ("student", "Étudiant"),
+            ("teacher", "Enseignant"),
+            ("admin", "Admin"),
+        ),
+        initial="student",
+        widget=forms.RadioSelect(attrs={"class": "auth-role-input"}),
+    )
+
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        "invalid_login": (
+            "Identifiant ou mot de passe incorrect. Vérifiez vos informations."
+        ),
+        "inactive": (
+            "Votre compte est désactivé. Veuillez contacter l’administrateur."
+        ),
+    }
+
+    _ROLE_HINTS = {
+        UserProfile.Role.STUDENT: "Étudiant",
+        UserProfile.Role.TEACHER: "Enseignant",
+        UserProfile.Role.ADMIN: "Admin",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].widget.attrs.update(
+            {
+                "class": "form-control auth-input",
+                "placeholder": "Identifiant",
+                "autocomplete": "username",
+            }
+        )
+        self.fields["password"].widget.attrs.update(
+            {
+                "class": "form-control auth-input",
+                "placeholder": "Mot de passe",
+                "autocomplete": "current-password",
+            }
+        )
+        self.fields["username"].label = "Identifiant"
+        self.fields["password"].label = "Mot de passe"
+
+    def confirm_login_allowed(self, user):
+        if not user.is_active:
+            raise forms.ValidationError(
+                self.error_messages["inactive"],
+                code="inactive",
+            )
+        account_type = self.cleaned_data.get("account_type") or "student"
+        profile = get_profile(user)
+        expected = {
+            "student": UserProfile.Role.STUDENT,
+            "teacher": UserProfile.Role.TEACHER,
+            "admin": UserProfile.Role.ADMIN,
+        }.get(account_type, UserProfile.Role.STUDENT)
+
+        # Superuser = admin même si le profil n’est pas encore synchronisé
+        actual = (
+            UserProfile.Role.ADMIN
+            if (account_type == "admin" and user.is_superuser)
+            else profile.role
+        )
+
+        if actual != expected:
+            hint = self._ROLE_HINTS.get(actual, "le bon statut")
+            raise forms.ValidationError(
+                f"Ce compte ne correspond pas au statut sélectionné. "
+                f"Choisissez « {hint} » pour vous connecter.",
+                code="role_mismatch",
+            )
+
+
 class StudentRegistrationForm(UserCreationForm):
     first_name = forms.CharField(
         label="Prénom",
@@ -279,8 +359,14 @@ class StudentRegistrationForm(UserCreationForm):
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     email = forms.EmailField(
-        label="Email",
-        widget=forms.EmailInput(attrs={"class": "form-control"}),
+        label="Email ESPRIT",
+        widget=forms.EmailInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "prenom.nom@esprit.tn",
+            }
+        ),
+        help_text="Obligatoire : adresse institutionnelle …@esprit.tn",
     )
     student_id = forms.CharField(
         label="Matricule",
@@ -288,6 +374,18 @@ class StudentRegistrationForm(UserCreationForm):
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "Ex. ESP-2024-001"}
         ),
+    )
+    phone = forms.CharField(
+        label="Téléphone",
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Ex. +216 20 000 000"}
+        ),
+    )
+    photo = forms.ImageField(
+        label="Photo de profil",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
     )
     filiere = forms.ChoiceField(
         label="Filière",
@@ -324,6 +422,16 @@ class StudentRegistrationForm(UserCreationForm):
                 self.data.get("filiere")
             )
 
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        if not email.endswith("@esprit.tn"):
+            raise forms.ValidationError(
+                "L’email doit être une adresse ESPRIT se terminant par @esprit.tn."
+            )
+        if get_user_model().objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Cet email est déjà utilisé.")
+        return email
+
     def clean(self):
         cleaned = super().clean()
         filiere = cleaned.get("filiere")
@@ -347,9 +455,317 @@ class StudentRegistrationForm(UserCreationForm):
             profile.role = UserProfile.Role.STUDENT
             profile.academic_level = self.cleaned_data["academic_level"]
             profile.student_id = self.cleaned_data.get("student_id", "")
+            profile.phone = self.cleaned_data.get("phone", "")
+            if self.cleaned_data.get("photo"):
+                profile.photo = self.cleaned_data["photo"]
             profile.save()
             # Évite le cache OneToOne créé par le signal (défaut 1A)
             user.profile = profile
+        return user
+
+
+class ProfileEditForm(forms.Form):
+    """Front Office — modification du profil personnel (pas le type)."""
+
+    first_name = forms.CharField(
+        label="Prénom",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    last_name = forms.CharField(
+        label="Nom",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+    )
+    phone = forms.CharField(
+        label="Téléphone",
+        required=False,
+        max_length=30,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    student_id = forms.CharField(
+        label="Matricule",
+        required=False,
+        max_length=40,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    photo = forms.ImageField(
+        label="Photo de profil",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        profile = getattr(self.user, "profile", None)
+        if profile and profile.role == UserProfile.Role.STUDENT:
+            if not email.endswith("@esprit.tn"):
+                raise forms.ValidationError(
+                    "L’email étudiant doit se terminer par @esprit.tn."
+                )
+        User = get_user_model()
+        qs = User.objects.filter(email__iexact=email)
+        if self.user:
+            qs = qs.exclude(pk=self.user.pk)
+        if qs.exists():
+            raise forms.ValidationError("Cet email est déjà utilisé.")
+        return email
+
+    def save(self):
+        user = self.user
+        user.first_name = self.cleaned_data["first_name"]
+        user.last_name = self.cleaned_data["last_name"]
+        user.email = self.cleaned_data["email"]
+        user.save()
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.phone = self.cleaned_data.get("phone", "")
+        profile.student_id = self.cleaned_data.get("student_id", "")
+        photo = self.cleaned_data.get("photo")
+        if photo:
+            profile.photo = photo
+        profile.save()
+        user.profile = profile
+        return user
+
+
+class AdminUserCreateForm(forms.Form):
+    """Back Office — création d’un utilisateur (CRUD)."""
+
+    first_name = forms.CharField(
+        label="Prénom",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    last_name = forms.CharField(
+        label="Nom",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+    )
+    phone = forms.CharField(
+        label="Téléphone",
+        required=False,
+        max_length=30,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    role = forms.ChoiceField(
+        label="Type d’utilisateur",
+        choices=UserProfile.Role.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    password = forms.CharField(
+        label="Mot de passe",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        min_length=8,
+    )
+    password_confirm = forms.CharField(
+        label="Confirmer le mot de passe",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    student_id = forms.CharField(
+        label="Matricule",
+        required=False,
+        max_length=40,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    academic_level = forms.ChoiceField(
+        label="Parcours / spécialité",
+        required=False,
+        choices=[("", "—")] + list(PROGRAM_CHOICES),
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    photo = forms.ImageField(
+        label="Photo",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+    )
+    is_active = forms.BooleanField(
+        label="Compte actif",
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if get_user_model().objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Cet email est déjà utilisé.")
+        return email
+
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get("password")
+        p2 = cleaned.get("password_confirm")
+        if p1 and p2 and p1 != p2:
+            self.add_error("password_confirm", "Les mots de passe ne correspondent pas.")
+        role = cleaned.get("role")
+        email = cleaned.get("email") or ""
+        if role == UserProfile.Role.STUDENT and not cleaned.get("academic_level"):
+            self.add_error(
+                "academic_level",
+                "Le parcours est requis pour un étudiant.",
+            )
+        if role == UserProfile.Role.STUDENT and email and not email.endswith("@esprit.tn"):
+            self.add_error(
+                "email",
+                "Un étudiant doit avoir une adresse …@esprit.tn.",
+            )
+        return cleaned
+
+    def save(self):
+        User = get_user_model()
+        email = self.cleaned_data["email"]
+        base = email.split("@")[0].lower().replace(".", "_")[:20] or "user"
+        username = base
+        n = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base}{n}"
+            n += 1
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=self.cleaned_data["password"],
+            first_name=self.cleaned_data["first_name"],
+            last_name=self.cleaned_data["last_name"],
+            is_active=bool(self.cleaned_data.get("is_active", True)),
+        )
+        role = self.cleaned_data["role"]
+        if role == UserProfile.Role.ADMIN:
+            user.is_staff = True
+            user.save(update_fields=["is_staff"])
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = role
+        profile.phone = self.cleaned_data.get("phone", "")
+        profile.student_id = self.cleaned_data.get("student_id", "")
+        profile.academic_level = self.cleaned_data.get("academic_level") or ""
+        if self.cleaned_data.get("photo"):
+            profile.photo = self.cleaned_data["photo"]
+        profile.save()
+        user.profile = profile
+        return user
+
+
+class AdminUserUpdateForm(forms.Form):
+    """Back Office — modification d’un utilisateur (CRUD)."""
+
+    first_name = forms.CharField(
+        label="Prénom",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    last_name = forms.CharField(
+        label="Nom",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+    )
+    phone = forms.CharField(
+        label="Téléphone",
+        required=False,
+        max_length=30,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    role = forms.ChoiceField(
+        label="Type d’utilisateur",
+        choices=UserProfile.Role.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    student_id = forms.CharField(
+        label="Matricule",
+        required=False,
+        max_length=40,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    academic_level = forms.ChoiceField(
+        label="Parcours / spécialité",
+        required=False,
+        choices=[("", "—")] + list(PROGRAM_CHOICES),
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    photo = forms.ImageField(
+        label="Photo",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+    )
+    password = forms.CharField(
+        label="Nouveau mot de passe",
+        required=False,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Laisser vide pour ne pas changer"}
+        ),
+        min_length=8,
+    )
+    is_active = forms.BooleanField(
+        label="Compte actif",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        qs = get_user_model().objects.filter(email__iexact=email)
+        if self.user:
+            qs = qs.exclude(pk=self.user.pk)
+        if qs.exists():
+            raise forms.ValidationError("Cet email est déjà utilisé.")
+        return email
+
+    def clean(self):
+        cleaned = super().clean()
+        role = cleaned.get("role")
+        email = cleaned.get("email") or ""
+        if role == UserProfile.Role.STUDENT and not cleaned.get("academic_level"):
+            self.add_error(
+                "academic_level",
+                "Le parcours est requis pour un étudiant.",
+            )
+        if role == UserProfile.Role.STUDENT and email and not email.endswith("@esprit.tn"):
+            self.add_error(
+                "email",
+                "Un étudiant doit avoir une adresse …@esprit.tn.",
+            )
+        return cleaned
+
+    def save(self):
+        user = self.user
+        user.first_name = self.cleaned_data["first_name"]
+        user.last_name = self.cleaned_data["last_name"]
+        user.email = self.cleaned_data["email"]
+        user.is_active = bool(self.cleaned_data.get("is_active"))
+        role = self.cleaned_data["role"]
+        if role == UserProfile.Role.ADMIN:
+            user.is_staff = True
+        pwd = self.cleaned_data.get("password")
+        if pwd:
+            user.set_password(pwd)
+        user.save()
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = role
+        profile.phone = self.cleaned_data.get("phone", "")
+        profile.student_id = self.cleaned_data.get("student_id", "")
+        profile.academic_level = self.cleaned_data.get("academic_level") or ""
+        if self.cleaned_data.get("photo"):
+            profile.photo = self.cleaned_data["photo"]
+        profile.save()
+        user.profile = profile
         return user
 
 

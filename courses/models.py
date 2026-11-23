@@ -40,6 +40,13 @@ class UserProfile(models.Model):
         help_text="Choisi à la création du compte — détermine les modules affectés.",
     )
     student_id = models.CharField("Matricule", max_length=40, blank=True)
+    phone = models.CharField("Téléphone", max_length=30, blank=True)
+    photo = models.ImageField(
+        "Photo de profil",
+        upload_to="avatars/",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "Profil utilisateur"
@@ -47,6 +54,12 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
+
+    @property
+    def photo_url(self):
+        if self.photo:
+            return self.photo.url
+        return None
 
     @property
     def is_student(self):

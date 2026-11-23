@@ -16,9 +16,9 @@ from .models import (
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "role", "academic_level", "student_id")
+    list_display = ("user", "role", "academic_level", "student_id", "phone")
     list_filter = ("role", "academic_level")
-    search_fields = ("user__username", "user__email", "student_id")
+    search_fields = ("user__username", "user__email", "student_id", "phone")
 
 
 @admin.register(Category)

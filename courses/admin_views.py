@@ -9,8 +9,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .forms import ChoiceFormSet, CourseForm, QuestionForm, QuizForm, ResourceForm
-from .programs import dept_levels_by_category_id
+from django.core.paginator import Paginator
+
+from .forms import (
+    AdminUserCreateForm,
+    AdminUserUpdateForm,
+    ChoiceFormSet,
+    CourseForm,
+    QuestionForm,
+    QuizForm,
+    ResourceForm,
+)
 from .models import (
     Category,
     Course,
@@ -22,7 +31,7 @@ from .models import (
     Resource,
     UserProfile,
 )
-from .programs import PROGRAM_GROUPS
+from .programs import PROGRAM_GROUPS, dept_levels_by_category_id
 from .roles import admin_required
 
 
@@ -115,41 +124,147 @@ def admin_dashboard(request):
 @login_required
 @admin_required
 def admin_users(request):
+    """Liste des utilisateurs — Read + recherche / filtres."""
     User = get_user_model()
     users = User.objects.select_related("profile").order_by("-date_joined")
-    return render(request, "courses/admin/users.html", {"users": users})
+    q = (request.GET.get("q") or "").strip()
+    role = (request.GET.get("role") or "").strip()
+    if q:
+        users = users.filter(
+            Q(username__icontains=q)
+            | Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(email__icontains=q)
+            | Q(profile__phone__icontains=q)
+        )
+    if role in dict(UserProfile.Role.choices):
+        users = users.filter(profile__role=role)
+    paginator = Paginator(users, 12)
+    page = paginator.get_page(request.GET.get("page"))
+    return render(
+        request,
+        "courses/admin/users.html",
+        {
+            "page": page,
+            "users": page.object_list,
+            "q": q,
+            "role": role,
+            "roles": UserProfile.Role.choices,
+        },
+    )
+
+
+@login_required
+@admin_required
+def admin_user_create(request):
+    """Create — ajouter un utilisateur."""
+    if request.method == "POST":
+        form = AdminUserCreateForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = form.save()
+            messages.success(
+                request,
+                f"Utilisateur « {user.get_full_name() or user.username} » créé.",
+            )
+            return redirect("courses:admin_user_detail", pk=user.pk)
+    else:
+        form = AdminUserCreateForm()
+    return render(
+        request,
+        "courses/admin/user_form.html",
+        {"form": form, "title": "Ajouter un utilisateur", "mode": "create"},
+    )
+
+
+@login_required
+@admin_required
+def admin_user_detail(request, pk):
+    """Read — consulter un utilisateur."""
+    User = get_user_model()
+    user = get_object_or_404(User.objects.select_related("profile"), pk=pk)
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    return render(
+        request,
+        "courses/admin/user_detail.html",
+        {"edit_user": user, "profile": profile},
+    )
 
 
 @login_required
 @admin_required
 def admin_user_edit(request, pk):
+    """Update — modifier un utilisateur."""
     User = get_user_model()
-    user = get_object_or_404(User, pk=pk)
+    user = get_object_or_404(User.objects.select_related("profile"), pk=pk)
     profile, _ = UserProfile.objects.get_or_create(user=user)
+    initial = {
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "phone": profile.phone,
+        "role": profile.role,
+        "student_id": profile.student_id,
+        "academic_level": profile.academic_level or "",
+        "is_active": user.is_active,
+    }
     if request.method == "POST":
-        profile.role = request.POST.get("role", profile.role)
-        profile.academic_level = request.POST.get("academic_level", "") or ""
-        profile.student_id = request.POST.get("student_id", "")
-        profile.save()
-        user.first_name = request.POST.get("first_name", user.first_name)
-        user.last_name = request.POST.get("last_name", user.last_name)
-        user.email = request.POST.get("email", user.email)
-        user.is_active = request.POST.get("is_active") == "on"
-        if profile.role == UserProfile.Role.ADMIN:
-            user.is_staff = True
-        user.save()
-        messages.success(request, f"Profil de {user.username} mis à jour.")
-        return redirect("courses:admin_users")
+        form = AdminUserUpdateForm(request.POST, request.FILES, user=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Utilisateur mis à jour.")
+            return redirect("courses:admin_user_detail", pk=user.pk)
+    else:
+        form = AdminUserUpdateForm(user=user, initial=initial)
     return render(
         request,
         "courses/admin/user_form.html",
         {
+            "form": form,
+            "title": f"Modifier — {user.get_full_name() or user.username}",
+            "mode": "edit",
             "edit_user": user,
             "profile": profile,
-            "roles": UserProfile.Role.choices,
-            "program_groups": PROGRAM_GROUPS,
         },
     )
+
+
+@login_required
+@admin_required
+@require_POST
+def admin_user_delete(request, pk):
+    """Delete — supprimer un utilisateur."""
+    User = get_user_model()
+    user = get_object_or_404(User, pk=pk)
+    if user.pk == request.user.pk:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
+        return redirect("courses:admin_users")
+    label = user.get_full_name() or user.username
+    user.delete()
+    messages.success(request, f"Utilisateur « {label} » supprimé.")
+    return redirect("courses:admin_users")
+
+
+@login_required
+@admin_required
+@require_POST
+def admin_user_toggle_active(request, pk):
+    """Activer / désactiver un compte utilisateur."""
+    User = get_user_model()
+    user = get_object_or_404(User, pk=pk)
+    if user.pk == request.user.pk:
+        messages.error(request, "Vous ne pouvez pas désactiver votre propre compte.")
+        return redirect("courses:admin_users")
+    user.is_active = not user.is_active
+    user.save(update_fields=["is_active"])
+    state = "activé" if user.is_active else "désactivé"
+    messages.success(
+        request,
+        f"Compte « {user.get_full_name() or user.username} » {state}.",
+    )
+    next_url = request.POST.get("next") or ""
+    if next_url == "detail":
+        return redirect("courses:admin_user_detail", pk=user.pk)
+    return redirect("courses:admin_users")
 
 
 @login_required

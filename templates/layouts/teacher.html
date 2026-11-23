@@ -23,6 +23,9 @@
   <span class="nav-ico">🔔</span> Notifications
   {% if unread_notifications %}<span class="side-badge">{{ unread_notifications }}</span>{% endif %}
 </a>
+<a href="{% url 'courses:profile' %}" class="{% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">👤</span> Mon profil
+</a>
 {% if is_admin %}
 <a href="{% url 'courses:admin_dashboard' %}" class="side-link-accent">
   <span class="nav-ico">🛡️</span> Console admin

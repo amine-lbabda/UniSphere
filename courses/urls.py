@@ -8,6 +8,8 @@ urlpatterns = [
     # Public
     path("", views.front_home, name="front_home"),
     path("inscription/", views.signup, name="signup"),
+    path("profil/", views.profile_view, name="profile"),
+    path("profil/modifier/", views.profile_edit, name="profile_edit"),
     path("espace/", views.role_home, name="role_home"),
     path("catalogue/", views.front_catalog, name="front_catalog"),
     path("modules/<slug:slug>/", views.front_detail, name="front_detail"),
@@ -105,9 +107,29 @@ urlpatterns = [
     path("console/", admin_views.admin_dashboard, name="admin_dashboard"),
     path("console/utilisateurs/", admin_views.admin_users, name="admin_users"),
     path(
+        "console/utilisateurs/nouveau/",
+        admin_views.admin_user_create,
+        name="admin_user_create",
+    ),
+    path(
         "console/utilisateurs/<int:pk>/",
+        admin_views.admin_user_detail,
+        name="admin_user_detail",
+    ),
+    path(
+        "console/utilisateurs/<int:pk>/modifier/",
         admin_views.admin_user_edit,
         name="admin_user_edit",
+    ),
+    path(
+        "console/utilisateurs/<int:pk>/supprimer/",
+        admin_views.admin_user_delete,
+        name="admin_user_delete",
+    ),
+    path(
+        "console/utilisateurs/<int:pk>/statut/",
+        admin_views.admin_user_toggle_active,
+        name="admin_user_toggle_active",
     ),
     path("console/modules/", admin_views.admin_courses, name="admin_courses"),
     path(

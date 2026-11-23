@@ -8,7 +8,10 @@
   <span class="nav-ico">📊</span> Dashboard global
 </a>
 <a href="{% url 'courses:admin_users' %}" class="{% if 'admin_user' in request.resolver_match.url_name %}active{% endif %}">
-  <span class="nav-ico">👥</span> Utilisateurs
+  <span class="nav-ico">👥</span> Gestion des utilisateurs
+</a>
+<a href="{% url 'courses:profile' %}" class="{% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}active{% endif %}">
+  <span class="nav-ico">👤</span> Mon profil
 </a>
 <a href="{% url 'courses:admin_courses' %}" class="{% if 'admin_course' in request.resolver_match.url_name %}active{% endif %}">
   <span class="nav-ico">📚</span> Tous les modules

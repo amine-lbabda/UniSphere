@@ -1,41 +1,114 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Connexion — UniSphere{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="login-page">
-  <div class="login-card reveal">
-    <div class="brand" style="margin-bottom:1.25rem;">
-      <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere" class="brand-logo">
-      <span>UniSphere</span>
+<div class="auth-shell">
+  <aside class="auth-visual">
+    <div class="auth-orb o1"></div>
+    <div class="auth-orb o2"></div>
+    <div class="auth-orb o3"></div>
+    <a href="{% url 'courses:front_home' %}" class="auth-visual-brand">
+      <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere">
+      <strong>UniSphere</strong>
+    </a>
+    <div class="auth-visual-copy">
+      <span class="eyebrow">Campus digital</span>
+      <h1>Un seul portail.<br><em>Trois univers.</em></h1>
+      <p>Étudiants, enseignants et admin se connectent ici. Choisissez votre statut, accédez à votre espace.</p>
     </div>
-    <h1>Connexion</h1>
-    <p class="sub">Chaque rôle a son espace : étudiant (consultation) ou enseignant (gestion des modules).</p>
-
-    {% if form.errors %}
-    <div class="alert alert-error" style="position:static;margin-bottom:1rem;box-shadow:none;">
-      Identifiants incorrects. Réessayez.
+    <div class="auth-visual-foot">
+      <span>Étudiant</span>
+      <span>Enseignant</span>
+      <span>Admin</span>
+      <span>ESPRIT</span>
     </div>
-    {% endif %}
+  </aside>
 
-    <form method="post">
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="id_username">Nom d’utilisateur</label>
-        <input type="text" name="username" id="id_username" class="form-control" autofocus required>
+  <section class="auth-panel">
+    <div class="auth-card">
+      <div class="auth-card-top">
+        <h2>Connexion</h2>
+        <p>Indiquez votre statut, puis vos identifiants.</p>
       </div>
-      <div class="form-group">
-        <label for="id_password">Mot de passe</label>
-        <input type="password" name="password" id="id_password" class="form-control" required>
+
+      {% if form.non_field_errors %}
+      <div class="auth-alert error">
+        {% for err in form.non_field_errors %}{{ err }}{% endfor %}
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Se connecter</button>
-    </form>
-    <p style="margin:1.25rem 0 0;font-size:0.9rem;color:var(--slate);text-align:center;">
-      Étudiant ? <a href="{% url 'courses:signup' %}">Créer un compte</a> (choix filière & spécialité)
-    </p>
-    <p style="margin:0.5rem 0 0;font-size:0.82rem;color:var(--slate);text-align:center;">
-      Comptes démo : voir README
-    </p>
-  </div>
+      {% endif %}
+
+      <form method="post" novalidate id="login-form">
+        {% csrf_token %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+        <div class="auth-role-switch auth-role-switch--3" role="radiogroup" aria-label="Statut">
+          {% for radio in form.account_type %}
+          <label>
+            {{ radio.tag }}
+            <span class="role-pill">
+              {% if radio.choice_label == "Étudiant" %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5v5.2c0 .8 2.7 2.8 6 2.8s6-2 6-2.8v-5.2"/>
+              </svg>
+              {% elif radio.choice_label == "Enseignant" %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>
+              </svg>
+              {% else %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3l8 4v5c0 5-3.4 8.4-8 9.5C7.4 20.4 4 17 4 12V7l8-4Z"/><path d="M9.5 12.2 11 13.7l3.5-3.5"/>
+              </svg>
+              {% endif %}
+              {{ radio.choice_label }}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.username.id_for_label }}">Identifiant</label>
+          {{ form.username }}
+          {{ form.username.errors }}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.password.id_for_label }}">Mot de passe</label>
+          <div class="auth-field">
+            {{ form.password }}
+            <button type="button" class="auth-eye" id="toggle-pass" aria-label="Afficher le mot de passe">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          {{ form.password.errors }}
+        </div>
+
+        <button type="submit" class="auth-btn">Entrer dans UniSphere</button>
+      </form>
+
+      <div class="auth-foot">
+        Étudiant / visiteur ?
+        <a href="{% url 'courses:signup' %}">Créer un compte @esprit.tn</a>
+        <span class="hint">Les comptes enseignants sont créés par l’administrateur.</span>
+      </div>
+    </div>
+  </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const pass = document.getElementById("id_password");
+const btn = document.getElementById("toggle-pass");
+btn?.addEventListener("click", () => {
+  const show = pass.type === "password";
+  pass.type = show ? "text" : "password";
+  btn.setAttribute("aria-label", show ? "Masquer le mot de passe" : "Afficher le mot de passe");
+});
+</script>
 {% endblock %}

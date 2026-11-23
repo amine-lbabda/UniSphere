@@ -12,6 +12,7 @@ from .forms import (
     ChoiceFormSet,
     CourseFilterForm,
     CourseForm,
+    ProfileEditForm,
     QuestionForm,
     QuizForm,
     ResourceForm,
@@ -139,7 +140,7 @@ def signup(request):
     if request.user.is_authenticated:
         return redirect("courses:role_home")
     if request.method == "POST":
-        form = StudentRegistrationForm(request.POST)
+        form = StudentRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
             assign_modules_for_student(user)
@@ -165,6 +166,63 @@ def signup(request):
             "filiere_labels": Filiere.LABELS,
         },
     )
+
+
+def _shell_layout(user):
+    if user_is_admin(user):
+        return "layouts/admin.html"
+    if user_is_teacher(user):
+        return "layouts/teacher.html"
+    return "layouts/student.html"
+
+
+@login_required
+def profile_view(request):
+    """Front Office — consulter mon profil."""
+    profile = get_profile(request.user)
+    return render(
+        request,
+        "courses/front/profile.html",
+        {
+            "profile": profile,
+            "shell_layout": _shell_layout(request.user),
+            "unread_notifications": _unread_count(request.user),
+        },
+    )
+
+
+@login_required
+def profile_edit(request):
+    """Front Office — modifier mes informations personnelles."""
+    profile = get_profile(request.user)
+    initial = {
+        "first_name": request.user.first_name,
+        "last_name": request.user.last_name,
+        "email": request.user.email,
+        "phone": profile.phone,
+        "student_id": profile.student_id,
+    }
+    if request.method == "POST":
+        form = ProfileEditForm(
+            request.POST, request.FILES, user=request.user
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profil mis à jour avec succès.")
+            return redirect("courses:profile")
+    else:
+        form = ProfileEditForm(user=request.user, initial=initial)
+    return render(
+        request,
+        "courses/front/profile_edit.html",
+        {
+            "form": form,
+            "profile": profile,
+            "shell_layout": _shell_layout(request.user),
+            "unread_notifications": _unread_count(request.user),
+        },
+    )
+
 
 def front_home(request):
     if user_is_student(request.user):

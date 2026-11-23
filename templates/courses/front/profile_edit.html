@@ -1,0 +1,68 @@
+{% extends shell_layout %}
+{% block title %}Modifier mon profil — UniSphere{% endblock %}
+{% block page_title %}Modifier mon profil{% endblock %}
+{% block page_sub %}Mettez à jour vos informations personnelles{% endblock %}
+{% block top_actions %}
+<a href="{% url 'courses:profile' %}" class="btn btn-secondary btn-sm">Annuler</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="form-card reveal" style="max-width:720px;">
+  {% csrf_token %}
+
+  <div class="profile-edit-head">
+    {% if profile.photo %}
+    <img src="{{ profile.photo.url }}" alt="" class="profile-avatar-img sm">
+    {% else %}
+    <div class="profile-avatar-fallback sm">{{ user.first_name|default:user.username|slice:":1"|upper }}</div>
+    {% endif %}
+    <div>
+      <strong>{{ user.get_full_name|default:user.username }}</strong>
+      <p class="help" style="margin:0.2rem 0 0;">Type : {{ profile.get_role_display }} (non modifiable ici)</p>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.first_name.id_for_label }}">Prénom *</label>
+      {{ form.first_name }}
+      {{ form.first_name.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.last_name.id_for_label }}">Nom *</label>
+      {{ form.last_name }}
+      {{ form.last_name.errors }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.email.id_for_label }}">Email *</label>
+    {{ form.email }}
+    {{ form.email.errors }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.phone.id_for_label }}">Téléphone</label>
+      {{ form.phone }}
+      {{ form.phone.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.student_id.id_for_label }}">Matricule</label>
+      {{ form.student_id }}
+      {{ form.student_id.errors }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.photo.id_for_label }}">Photo de profil</label>
+    {{ form.photo }}
+    {{ form.photo.errors }}
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{% url 'courses:profile' %}" class="btn btn-secondary">Annuler</a>
+  </div>
+</form>
+{% endblock %}
