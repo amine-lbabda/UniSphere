@@ -1,3 +1,5 @@
+import typing
+
 from django import forms
 from django.db import transaction
 from django.forms import formset_factory
@@ -14,7 +16,7 @@ class EventsForm(forms.ModelForm):
     class Meta:
         model = Evenements
         fields = ("title", "description", "start_date", "end_date", "type_evenement")
-        widgets = {
+        widgets: typing.ClassVar = {
             "start_date": forms.DateInput(
                 attrs={"type": "date", "class": "form-control"}
             ),
