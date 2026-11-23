@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer un événement{% endblock %}
+{% block content %}
+  <section class="section-card confirm-card">
+    <h2>Supprimer l'événement</h2>
+    <p>Voulez-vous vraiment supprimer <strong>{{ event.title }}</strong> ? Cette action est définitive.</p>
+    <form method="post" class="d-flex justify-content-center gap-2 mt-4">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Confirmer la suppression</button>
+      <a class="btn btn-outline-secondary" href="{% url 'events:liste' %}">Annuler</a>
+    </form>
+  </section>
+{% endblock %}

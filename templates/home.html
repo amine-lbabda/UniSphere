@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Accueil{% endblock %}
+{% block content %}
+  <section class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4 p-md-5">
+      <p class="text-uppercase small fw-semibold text-danger mb-2">Plateforme universitaire</p>
+      <h1 class="display-5 fw-semibold mb-3">Bienvenue sur UniSphere</h1>
+      <p class="lead mb-0">Découvrez les clubs, leurs membres et les événements de votre campus.</p>
+    </div>
+  </section>
+
+  <section class="row g-3">
+    <div class="col-12 col-md-6">
+      <a class="card h-100 text-decoration-none" href="{% url 'clubs:liste' %}">
+        <div class="card-body p-4">
+          <h2 class="h5">Clubs</h2>
+          <p class="text-dark mb-0">Consulter et gérer les clubs universitaires</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-12 col-md-6">
+      <a class="card h-100 text-decoration-none" href="{% url 'events:liste' %}">
+        <div class="card-body p-4">
+          <h2 class="h5">Événements</h2>
+          <p class="text-dark mb-0">Découvrir les événements à venir</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-12 col-md-6">
+      <a class="card h-100 text-decoration-none" href="{% url 'events:create' %}">
+        <div class="card-body p-4">
+          <h2 class="h5">Nouvel événement</h2>
+          <p class="text-dark mb-0">Créer un événement universitaire</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-12 col-md-6">
+      <a class="card h-100 text-decoration-none" href="{% url 'admin:UsersApp_utilisateur_changelist' %}">
+        <div class="card-body p-4">
+          <h2 class="h5">Utilisateurs</h2>
+          <p class="text-dark mb-0">Gérer les étudiants et enseignants</p>
+        </div>
+      </a>
+    </div>
+  </section>
+{% endblock %}

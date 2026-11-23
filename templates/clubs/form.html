@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}{% if club %}Modifier{% else %}Créer{% endif %} un club{% endblock %}
+{% block content %}
+  <section class="section-card form-card">
+    <div class="page-header">
+      <h1>{% if club %}Modifier le club{% else %}Nouveau club{% endif %}</h1>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form.visible_fields %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for error in field.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <h2 class="h5 mt-4">Bureau du club</h2>
+      {{ board_formset.management_form }}
+      {% for error in board_formset.non_form_errors %}
+        <div class="text-danger small">{{ error }}</div>
+      {% endfor %}
+      <div id="board-member-forms" data-prefix="{{ board_formset.prefix }}">
+        {% for board_form in board_formset %}
+          {% for hidden in board_form.hidden_fields %}{{ hidden }}{% endfor %}
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ board_form.member.id_for_label }}">Membre</label>
+              {{ board_form.member }}
+              {% for error in board_form.member.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ board_form.board_role.id_for_label }}">Poste</label>
+              {{ board_form.board_role }}
+              {% for error in board_form.board_role.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <template id="empty-board-member-form">
+        {% with board_form=board_formset.empty_form %}
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ board_form.member.id_for_label }}">Membre</label>
+              {{ board_form.member }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ board_form.board_role.id_for_label }}">Poste</label>
+              {{ board_form.board_role }}
+            </div>
+          </div>
+        {% endwith %}
+      </template>
+      <button class="btn btn-outline-primary" type="button" id="add-board-member">
+        Ajouter un membre
+      </button>
+
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn btn-outline-secondary" href="{% url 'clubs:liste' %}">Annuler</a>
+      </div>
+    </form>
+  </section>
+  <script>
+    document.getElementById("add-board-member").addEventListener("click", function () {
+      const container = document.getElementById("board-member-forms");
+      const totalForms = document.getElementById(
+        `id_${container.dataset.prefix}-TOTAL_FORMS`
+      );
+      const newIndex = Number(totalForms.value);
+      const newForm = document
+        .getElementById("empty-board-member-form")
+        .innerHTML.replace(/__prefix__/g, newIndex);
+
+      container.insertAdjacentHTML("beforeend", newForm);
+      totalForms.value = newIndex + 1;
+    });
+  </script>
+{% endblock %}

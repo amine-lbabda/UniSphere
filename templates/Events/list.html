@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Événements{% endblock %}
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Événements</h1>
+    <a class="btn btn-primary" href="{% url 'events:create' %}">Ajouter un événement</a>
+  </div>
+  <section class="row g-3">
+    {% for e in events %}
+      <div class="col-12">
+        <article class="card shadow-sm">
+          <div class="card-body d-flex justify-content-between align-items-center gap-3">
+            <div>
+              <h2 class="h5 mb-1">{{ e.title }}</h2>
+              <p class="mb-2">{{ e.description }}</p>
+              <div class="d-flex flex-wrap gap-2">
+                <span class="badge text-bg-light border">{{ e.get_type_evenement_display }}</span>
+                <span class="badge text-bg-light border">{{ e.start_date }} - {{ e.end_date }}</span>
+              </div>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'events:update' e.pk %}">Modifier</a>
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'events:delete' e.pk %}">Supprimer</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body text-center text-secondary py-5">Aucun événement enregistré.</div>
+        </div>
+      </div>
+    {% endfor %}
+  </section>
+{% endblock %}

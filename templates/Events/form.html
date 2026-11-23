@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}{% if event %}Modifier{% else %}Créer{% endif %} un événement{% endblock %}
+{% block content %}
+  <section class="section-card form-card">
+    <div class="page-header">
+      <h1>{% if event %}Modifier l'événement{% else %}Nouvel événement{% endif %}</h1>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% for field in form.visible_fields %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for error in field.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <h2 class="h5 mt-4">Participants</h2>
+      {{ participant_formset.management_form }}
+      {% for error in participant_formset.non_form_errors %}
+        <div class="text-danger small">{{ error }}</div>
+      {% endfor %}
+      <div id="event-participant-forms" data-prefix="{{ participant_formset.prefix }}">
+        {% for participant_form in participant_formset %}
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ participant_form.participant.id_for_label }}">
+                Participant
+              </label>
+              {{ participant_form.participant }}
+              {% for error in participant_form.participant.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <template id="empty-event-participant-form">
+        {% with participant_form=participant_formset.empty_form %}
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ participant_form.participant.id_for_label }}">
+                Participant
+              </label>
+              {{ participant_form.participant }}
+            </div>
+          </div>
+        {% endwith %}
+      </template>
+      <button class="btn btn-outline-primary" type="button" id="add-event-participant">
+        Ajouter un participant
+      </button>
+
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <a class="btn btn-outline-secondary" href="{% url 'events:liste' %}">Annuler</a>
+      </div>
+    </form>
+  </section>
+  <script>
+    document.getElementById("add-event-participant").addEventListener("click", function () {
+      const container = document.getElementById("event-participant-forms");
+      const totalForms = document.getElementById(
+        `id_${container.dataset.prefix}-TOTAL_FORMS`
+      );
+      const newIndex = Number(totalForms.value);
+      const newForm = document
+        .getElementById("empty-event-participant-form")
+        .innerHTML.replace(/__prefix__/g, newIndex);
+
+      container.insertAdjacentHTML("beforeend", newForm);
+      totalForms.value = newIndex + 1;
+    });
+  </script>
+{% endblock %}

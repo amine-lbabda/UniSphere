@@ -4,47 +4,30 @@ from django.db import models
 # Create your models here.
 
 
-class ClubsMembersBoard(models.Model):
-    member = models.ForeignKey("UsersApp.Utilisateur", on_delete=models.CASCADE)
-    club = models.ForeignKey("EventsApp.Clubs", on_delete=models.CASCADE)
-    board_role = models.CharField(max_length=100)
-
-
 class Evenements(models.Model):
     title = models.CharField(
         max_length=40,
+        verbose_name="Titre",
         validators=[
             MinLengthValidator(1, "An event should never have an empty title !")
         ],
     )
     description = models.TextField(
         max_length=100,
+        verbose_name="Description",
         validators=[MinLengthValidator(1, "An event should have a description !")],
     )
-    start_date = models.DateField(auto_now_add=True)
-    end_date = models.DateField(auto_now_add=True)
+    start_date = models.DateField(verbose_name="Date de début")
+    end_date = models.DateField(verbose_name="Date de fin")
     type_evenement = models.CharField(
         choices=[("online", "Online"), ("onsite", "OnSite")],
         max_length=200,
         default="online",
+        verbose_name="Type d'événement",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    participants = models.ForeignKey("UsersApp.Utilisateur", on_delete=models.CASCADE)
-
-
-class Clubs(models.Model):
-    name = models.CharField(
-        max_length=100,
-        validators=[MinLengthValidator(1, "A club name should never be empty !")],
+    participants = models.ManyToManyField(
+        "UsersApp.Utilisateur",
+        verbose_name="Participant",
     )
-    description = models.TextField(
-        max_length=100,
-        validators=[MinLengthValidator(1, "A description should be provided !")],
-    )
-    Active = models.BooleanField(default=True)
-    member_board = models.ManyToManyField(
-        "UsersApp.Utilisateur", through=ClubsMembersBoard
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
