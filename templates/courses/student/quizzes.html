@@ -1,0 +1,25 @@
+{% extends "layouts/student.html" %}
+{% block title %}Mes quiz — UniSphere{% endblock %}
+{% block page_title %}Mes quiz{% endblock %}
+{% block page_sub %}Évaluations de vos modules{% endblock %}
+
+{% block content %}
+{% for item in cards %}
+<div class="quiz-card reveal">
+  <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+    <div>
+      <strong>{{ item.quiz.title }}</strong>
+      <p style="margin:0.3rem 0 0;color:var(--slate);font-size:0.9rem;">
+        {{ item.quiz.course.code }} · {{ item.quiz.duration_minutes }} min · seuil {{ item.quiz.passing_score }}%
+        {% if item.attempt %} · dernier score <strong>{{ item.attempt.score }}%</strong>{% endif %}
+      </p>
+    </div>
+    <a href="{% url 'courses:front_quiz_take' item.quiz.pk %}" class="btn btn-primary btn-sm">
+      {% if item.attempt %}Repasser{% else %}Lancer{% endif %}
+    </a>
+  </div>
+</div>
+{% empty %}
+<div class="empty-state"><p>Aucun quiz disponible.</p></div>
+{% endfor %}
+{% endblock %}

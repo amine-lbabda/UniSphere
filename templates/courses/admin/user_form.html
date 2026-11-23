@@ -1,0 +1,47 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Éditer {{ edit_user.username }}{% endblock %}
+{% block page_title %}Modifier {{ edit_user.username }}{% endblock %}
+{% block page_sub %}Rôle & niveau scolaire{% endblock %}
+
+{% block content %}
+<form method="post" class="form-card reveal">
+  {% csrf_token %}
+  <div class="form-row">
+    <div class="form-group"><label>Prénom</label><input class="form-control" name="first_name" value="{{ edit_user.first_name }}"></div>
+    <div class="form-group"><label>Nom</label><input class="form-control" name="last_name" value="{{ edit_user.last_name }}"></div>
+  </div>
+  <div class="form-group"><label>Email</label><input class="form-control" name="email" value="{{ edit_user.email }}"></div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Rôle</label>
+      <select name="role" class="form-control">
+        {% for val, label in roles %}
+        <option value="{{ val }}" {% if profile.role == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Parcours / spécialité (étudiants)</label>
+      <select name="academic_level" class="form-control">
+        <option value="">—</option>
+        {% for group, options in program_groups %}
+        <optgroup label="{{ group }}">
+          {% for val, label in options %}
+          <option value="{{ val }}" {% if profile.academic_level == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="form-group"><label>Matricule</label><input class="form-control" name="student_id" value="{{ profile.student_id }}"></div>
+  <div class="form-group" style="display:flex;gap:0.5rem;align-items:center;">
+    <input type="checkbox" name="is_active" id="id_active" {% if edit_user.is_active %}checked{% endif %}>
+    <label for="id_active" style="margin:0;">Compte actif</label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Enregistrer</button>
+    <a href="{% url 'courses:admin_users' %}" class="btn btn-secondary">Annuler</a>
+  </div>
+</form>
+{% endblock %}

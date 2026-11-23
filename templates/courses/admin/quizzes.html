@@ -1,0 +1,44 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Quiz — Console{% endblock %}
+{% block page_title %}Tous les quiz{% endblock %}
+{% block page_sub %}CRUD complet · tous les modules{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:1rem;">
+  <div></div>
+  <a href="{% url 'courses:admin_quiz_create' %}" class="btn btn-primary">+ Nouveau quiz</a>
+</div>
+
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Titre</th><th>Module</th><th>Enseignant</th>
+        <th>Questions</th><th>Publié</th><th>Tentatives</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in quizzes %}
+      <tr>
+        <td><strong>{{ q.title }}</strong></td>
+        <td>{{ q.course.code }}</td>
+        <td>{{ q.course.instructor.get_full_name|default:q.course.instructor.username }}</td>
+        <td>{{ q.question_n }}</td>
+        <td>{% if q.is_published %}Oui{% else %}Non{% endif %}</td>
+        <td>{{ q.attempt_count }}</td>
+        <td class="actions">
+          <a class="btn btn-sm btn-ghost" href="{% url 'courses:admin_quiz_detail' q.pk %}">Détail</a>
+          <a class="btn btn-sm btn-ghost" href="{% url 'courses:admin_quiz_edit' q.pk %}">Modifier</a>
+          <form method="post" action="{% url 'courses:admin_quiz_delete' q.pk %}" style="display:inline;" data-confirm="Supprimer « {{ q.title }} » et ses questions ?">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-danger" type="submit">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">Aucun quiz.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

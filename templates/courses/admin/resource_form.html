@@ -1,0 +1,70 @@
+{% extends "layouts/admin.html" %}
+{% block title %}{{ title }} — Console{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Gestion globale des ressources{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="form-card reveal">
+  {% csrf_token %}
+
+  <div class="form-group">
+    <label for="{{ form.course.id_for_label }}">Module</label>
+    {{ form.course }}
+    {{ form.course.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.title.id_for_label }}">Titre</label>
+    {{ form.title }}
+    {{ form.title.errors }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.resource_type.id_for_label }}">Type</label>
+      {{ form.resource_type }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.target_level.id_for_label }}">Niveau destiné *</label>
+      {{ form.target_level }}
+      {{ form.target_level.errors }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.description.id_for_label }}">Description</label>
+    {{ form.description }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.file.id_for_label }}">Fichier</label>
+      {{ form.file }}
+      {{ form.file.errors }}
+      {% if resource and resource.file %}
+      <p class="help">Fichier actuel : {{ resource.file.name }}</p>
+      {% endif %}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.order.id_for_label }}">Ordre</label>
+      {{ form.order }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.url.id_for_label }}">URL</label>
+    {{ form.url }}
+    {{ form.url.errors }}
+  </div>
+
+  <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+    {{ form.is_required }}
+    <label for="{{ form.is_required.id_for_label }}" style="margin:0;">Ressource obligatoire</label>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">{% if mode == "create" %}Créer{% else %}Enregistrer{% endif %}</button>
+    <a href="{% url 'courses:admin_resources' %}" class="btn btn-secondary">Annuler</a>
+  </div>
+</form>
+{% endblock %}

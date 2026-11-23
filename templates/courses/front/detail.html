@@ -1,0 +1,143 @@
+{% extends layout|default:"base.html" %}
+{% block title %}{{ course.title }} — UniSphere{% endblock %}
+{% block page_title %}{{ course.code }}{% endblock %}
+{% block page_sub %}{{ course.title }}{% endblock %}
+
+{% block content %}
+<section class="detail-hero" style="padding-top:0;">
+
+  <div class="container">
+    <div class="module-banner glass-panel reveal" style="background:linear-gradient(135deg, {{ course.category.color|default:'#3b5bdb' }}dd, #1e3a8acc 55%, #845ef7aa);color:#fff;margin-bottom:1.5rem;">
+      <div>
+        <div class="course-meta" style="margin-bottom:0.6rem;">
+          <span class="chip" style="background:rgba(255,255,255,.2);color:#fff;">{{ course.code }}</span>
+          <span class="chip" style="background:rgba(255,255,255,.15);color:#fff;">{{ course.get_level_display }}</span>
+          {% if course.category %}<span class="chip" style="background:rgba(255,255,255,.12);color:#fff;">{{ course.category.name }}</span>{% endif %}
+        </div>
+        <h1 style="color:#fff;margin:0;">{{ course.title }}</h1>
+        {% if course.short_description %}
+        <p style="opacity:.85;margin:0.6rem 0 0;max-width:40rem;">{{ course.short_description }}</p>
+        {% endif %}
+      </div>
+      {% if module_progress %}
+      <div class="progress-hero" style="color:#fff;">
+        <div class="score-ring score-ring-light" style="--score: {{ module_progress.percent }}%;">
+          <strong>{{ module_progress.percent }}%</strong>
+        </div>
+        <span>{{ module_progress.label }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="detail-layout">
+      <article class="detail-main reveal">
+        <h2 class="detail-section-title">À propos</h2>
+        <div style="white-space:pre-line;">{{ course.description }}</div>
+
+        {% if course.prerequisites %}
+        <h2 class="detail-section-title">Prérequis</h2>
+        <div class="prereq-row" style="white-space:pre-line;">{{ course.prerequisites }}</div>
+        {% endif %}
+
+        <h2 class="detail-section-title">Ressources pédagogiques</h2>
+        {% if visible_resources %}
+        <ul class="resource-list">
+          {% for r in visible_resources %}
+          <li class="resource-item">
+            <div class="resource-icon">{{ r.type_icon }}</div>
+            <div style="flex:1;">
+              <strong>{{ r.title }}{% if r.is_required %} · <span style="color:var(--coral);font-size:0.8rem;">Obligatoire</span>{% endif %}</strong>
+              <small>{{ r.get_resource_type_display }} · {{ r.get_target_level_display }}{% if r.description %} — {{ r.description|truncatewords:12 }}{% endif %}</small>
+            </div>
+            {% if r.url %}
+            <a href="{{ r.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Ouvrir</a>
+            {% elif r.file %}
+            <a href="{{ r.file.url }}" target="_blank" class="btn btn-sm btn-secondary">Télécharger</a>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:var(--slate);">Aucune ressource disponible pour votre parcours.</p>
+        {% endif %}
+
+        <h2 class="detail-section-title">Quiz &amp; évaluations</h2>
+        {% if quiz_cards %}
+          {% for item in quiz_cards %}
+          <div class="quiz-card">
+            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
+              <div>
+                <strong style="font-size:1.05rem;">{{ item.quiz.title }}</strong>
+                <p style="margin:0.3rem 0 0;color:var(--slate);font-size:0.9rem;">
+                  {{ item.quiz.question_count }} question{{ item.quiz.question_count|pluralize }} · {{ item.quiz.duration_minutes }} min · seuil {{ item.quiz.passing_score }}%
+                  {% if item.quiz.due_date %} · échéance {{ item.quiz.due_date|date:"d/m/Y H:i" }}{% endif %}
+                </p>
+                {% if item.attempt %}
+                <p style="margin:0.35rem 0 0;font-size:0.85rem;">
+                  Dernier score : <strong>{{ item.attempt.score }}%</strong>
+                  {% if item.attempt.passed %}<span class="badge badge-published">Réussi</span>{% else %}<span class="badge badge-archived">À retravailler</span>{% endif %}
+                </p>
+                {% endif %}
+              </div>
+              {% if is_student_view %}
+              <a href="{% url 'courses:front_quiz_take' item.quiz.pk %}" class="btn btn-primary btn-sm btn-glow">Passer le quiz</a>
+              {% elif is_teacher %}
+              <span class="chip">Réservé aux étudiants</span>
+              {% else %}
+              <a href="{% url 'login' %}" class="btn btn-secondary btn-sm">Connexion étudiant</a>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p style="color:var(--slate);">Aucun quiz publié pour ce module.</p>
+        {% endif %}
+
+        {% if related %}
+        <h2 class="detail-section-title">Dans le même département</h2>
+        <div class="course-grid">
+          {% for c in related %}
+          <a href="{{ c.get_absolute_url }}" class="course-card">
+            <div class="course-cover" style="height:100px;background:linear-gradient(135deg, {{ c.category.color|default:'#3b5bdb' }}, #22b8cf);">
+              <div class="course-cover-pattern"></div>
+            </div>
+            <div class="course-body">
+              <h3>{{ c.title }}</h3>
+              <div class="course-footer"><span>{{ c.code }}</span><span>{{ c.duration_hours }} h</span></div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </article>
+
+      <aside class="detail-sidebar reveal">
+        <div class="info-card">
+          <h3>Fiche module</h3>
+          <div class="info-row"><span>Niveau</span><strong>{{ course.get_level_display }}</strong></div>
+          <div class="info-row"><span>Volume</span><strong>{{ course.duration_hours }} h</strong></div>
+          <div class="info-row"><span>Responsable</span><strong>{{ course.instructor.get_full_name|default:course.instructor.username }}</strong></div>
+          <div class="info-row"><span>Ressources</span><strong>{{ course.resources.count }}</strong></div>
+          <div class="info-row"><span>Quiz</span><strong>{{ published_quizzes|length }}</strong></div>
+          {% if is_student_view %}
+            {% if enrolled %}
+            <p style="margin:1rem 0 0;color:var(--teal);font-weight:600;">✓ Affecté à votre parcours</p>
+            {% else %}
+            <form method="post" action="{% url 'courses:front_enroll' course.slug %}" style="margin-top:1rem;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary" style="width:100%;">Ajouter à mon parcours</button>
+            </form>
+            {% endif %}
+            {% if module_progress %}
+            <div class="bar-track" style="margin-top:1rem;"><div class="bar-fill" style="width:{{ module_progress.percent }}%"></div></div>
+            <small style="color:var(--slate);">{{ module_progress.quizzes_passed }}/{{ module_progress.quiz_count }} quiz réussis</small>
+            {% endif %}
+            <p style="margin:0.75rem 0 0;font-size:0.82rem;color:var(--slate);">Consultation seule — pas de création / modification.</p>
+          {% endif %}
+        </div>
+        <a href="{% if is_student_view %}{% url 'courses:student_dashboard' %}{% else %}{% url 'courses:front_catalog' %}{% endif %}" class="btn btn-secondary" style="width:100%;">← Retour</a>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}

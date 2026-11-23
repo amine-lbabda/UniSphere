@@ -1,0 +1,23 @@
+{% extends "layouts/app_shell.html" %}
+{% block body_class %}space-student{% endblock %}
+{% block space_label %}Espace étudiant{% endblock %}
+{% block brand_url %}{% url 'courses:student_dashboard' %}{% endblock %}
+
+{% block sidebar %}
+<a href="{% url 'courses:student_dashboard' %}" class="{% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
+  <span class="nav-ico">📊</span> Dashboard
+</a>
+<a href="{% url 'courses:front_catalog' %}" class="{% if request.resolver_match.url_name == 'front_catalog' %}active{% endif %}">
+  <span class="nav-ico">📚</span> Mes modules
+</a>
+<a href="{% url 'courses:student_quizzes' %}" class="{% if request.resolver_match.url_name == 'student_quizzes' or 'quiz' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">📝</span> Mes quiz
+</a>
+<a href="{% url 'courses:student_results' %}" class="{% if request.resolver_match.url_name == 'student_results' %}active{% endif %}">
+  <span class="nav-ico">🎯</span> Résultats
+</a>
+<a href="{% url 'courses:front_notifications' %}" class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">🔔</span> Notifications
+  {% if unread_notifications %}<span class="side-badge">{{ unread_notifications }}</span>{% endif %}
+</a>
+{% endblock %}

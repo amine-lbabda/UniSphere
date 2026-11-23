@@ -1,0 +1,25 @@
+{% extends "layouts/student.html" %}
+{% block title %}Résultats — UniSphere{% endblock %}
+{% block page_title %}Mes résultats{% endblock %}
+{% block page_sub %}Historique de vos tentatives{% endblock %}
+
+{% block content %}
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead><tr><th>Quiz</th><th>Module</th><th>Score</th><th>Résultat</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for a in attempts %}
+      <tr>
+        <td>{{ a.quiz.title }}</td>
+        <td>{{ a.quiz.course.code }}</td>
+        <td><strong>{{ a.score }}%</strong></td>
+        <td>{% if a.passed %}<span class="badge badge-published">Réussi</span>{% else %}<span class="badge badge-archived">Échoué</span>{% endif %}</td>
+        <td>{{ a.completed_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">Aucun résultat pour le moment.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

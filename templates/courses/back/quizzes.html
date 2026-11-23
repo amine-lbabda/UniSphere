@@ -1,0 +1,50 @@
+{% extends "layouts/teacher.html" %}
+{% block title %}Quiz — Enseignant{% endblock %}
+{% block page_title %}Quiz & évaluations{% endblock %}
+{% block page_sub %}CRUD de vos quiz · créer, modifier, questions, supprimer{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:1rem;">
+  <div></div>
+  <a href="{% url 'courses:back_quiz_create_standalone' %}" class="btn btn-primary">+ Nouveau quiz</a>
+</div>
+
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Titre</th><th>Module</th><th>Questions</th>
+        <th>Publié</th><th>Tentatives</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in quizzes %}
+      <tr>
+        <td><strong>{{ q.title }}</strong></td>
+        <td>{{ q.course.code }}</td>
+        <td>{{ q.q_count }}</td>
+        <td>{% if q.is_published %}Oui{% else %}Non{% endif %}</td>
+        <td>{{ q.attempt_count }}</td>
+        <td class="actions">
+          <a href="{% url 'courses:back_quiz_detail' q.pk %}" class="btn btn-sm btn-ghost">Détail</a>
+          <a href="{% url 'courses:back_quiz_edit' q.pk %}" class="btn btn-sm btn-secondary">Modifier</a>
+          <a href="{% url 'courses:back_question_create' q.pk %}" class="btn btn-sm btn-primary">+ Question</a>
+          <form method="post" action="{% url 'courses:back_quiz_delete' q.pk %}" style="display:inline;" data-confirm="Supprimer « {{ q.title }} » ?">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="list">
+            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6">
+          Aucun quiz.
+          <a href="{% url 'courses:back_quiz_create_standalone' %}">Créer le premier</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

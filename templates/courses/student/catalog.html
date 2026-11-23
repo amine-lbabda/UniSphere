@@ -1,0 +1,43 @@
+{% extends "layouts/student.html" %}
+{% block title %}Mes modules — UniSphere{% endblock %}
+{% block page_title %}Mes modules{% endblock %}
+{% block page_sub %}
+  Uniquement les modules <strong>publiés</strong> pour votre parcours
+  {% if user_profile %}· {{ user_profile.get_academic_level_display }}{% endif %}
+  · {{ total }} visible{{ total|pluralize }}
+{% endblock %}
+
+{% block content %}
+<form method="get" class="filter-bar reveal" style="grid-template-columns:1.6fr 1fr auto;">
+  {{ form.q }}
+  {{ form.category }}
+  <button type="submit" class="btn btn-primary">Filtrer</button>
+</form>
+
+{% if courses %}
+<div class="course-grid">
+  {% for course in courses %}
+  <a href="{{ course.get_absolute_url }}" class="course-card">
+    <div class="course-cover" {% if not course.cover %}style="background:linear-gradient(135deg, {{ course.category.color|default:'#3b5bdb' }}, #22b8cf);"{% endif %}>
+      {% if course.cover %}<img src="{{ course.cover.url }}" alt="">{% else %}<div class="course-cover-pattern"></div>{% endif %}
+      <span class="cover-code">{{ course.code }}</span>
+    </div>
+    <div class="course-body">
+      <div class="course-meta">
+        <span class="chip">{{ course.get_level_display }}</span>
+        {% if course.category %}<span class="chip chip-amber">{{ course.category.name }}</span>{% endif %}
+      </div>
+      <h3>{{ course.title }}</h3>
+      <p class="excerpt">{{ course.short_description|default:course.description|truncatewords:18 }}</p>
+      <div class="course-footer">
+        <span>{{ course.instructor.get_full_name|default:course.instructor.username }}</span>
+        <span>{{ course.duration_hours }} h</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><p>Aucun module pour votre niveau.</p></div>
+{% endif %}
+{% endblock %}

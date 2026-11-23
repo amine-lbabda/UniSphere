@@ -1,0 +1,31 @@
+{% extends "layouts/app_shell.html" %}
+{% block body_class %}space-teacher{% endblock %}
+{% block space_label %}Espace enseignant{% endblock %}
+{% block brand_url %}{% url 'courses:back_dashboard' %}{% endblock %}
+
+{% block sidebar %}
+<a href="{% url 'courses:back_dashboard' %}" class="{% if request.resolver_match.url_name == 'back_dashboard' %}active{% endif %}">
+  <span class="nav-ico">📊</span> Dashboard
+</a>
+<a href="{% url 'courses:back_course_list' %}" class="{% if request.resolver_match.url_name == 'back_course_list' or request.resolver_match.url_name == 'back_course_detail' or request.resolver_match.url_name == 'back_course_edit' %}active{% endif %}">
+  <span class="nav-ico">📚</span> Mes modules
+</a>
+<a href="{% url 'courses:back_course_create' %}" class="{% if request.resolver_match.url_name == 'back_course_create' %}active{% endif %}">
+  <span class="nav-ico">✨</span> Nouveau module
+</a>
+<a href="{% url 'courses:back_quizzes' %}" class="{% if 'quiz' in request.resolver_match.url_name or 'question' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">📝</span> Quiz & évaluations
+</a>
+<a href="{% url 'courses:back_students' %}" class="{% if request.resolver_match.url_name == 'back_students' %}active{% endif %}">
+  <span class="nav-ico">👨‍🎓</span> Étudiants
+</a>
+<a href="{% url 'courses:front_notifications' %}" class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">🔔</span> Notifications
+  {% if unread_notifications %}<span class="side-badge">{{ unread_notifications }}</span>{% endif %}
+</a>
+{% if is_admin %}
+<a href="{% url 'courses:admin_dashboard' %}" class="side-link-accent">
+  <span class="nav-ico">🛡️</span> Console admin
+</a>
+{% endif %}
+{% endblock %}

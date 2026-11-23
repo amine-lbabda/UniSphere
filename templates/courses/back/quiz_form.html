@@ -1,0 +1,58 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}{{ title }} — UniSphere{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    {% if course %}
+    <p>Module : <strong>{{ course.code }} — {{ course.title }}</strong></p>
+    {% else %}
+    <p>Choisissez le module concerné, puis paramétrez le quiz.</p>
+    {% endif %}
+  </div>
+  <a href="{% if quiz %}{% url 'courses:back_quiz_detail' quiz.pk %}{% elif course %}{% url 'courses:back_course_detail' course.pk %}{% else %}{% url 'courses:back_quizzes' %}{% endif %}" class="btn btn-secondary">Retour</a>
+</div>
+
+<form method="post" class="form-card reveal">
+  {% csrf_token %}
+  {% if select_course and form.course %}
+  <div class="form-group">
+    <label for="{{ form.course.id_for_label }}">Module</label>
+    {{ form.course }}
+    {{ form.course.errors }}
+  </div>
+  {% endif %}
+  <div class="form-group">
+    <label for="{{ form.title.id_for_label }}">Titre</label>
+    {{ form.title }}
+    {{ form.title.errors }}
+  </div>
+  <div class="form-group">
+    <label for="{{ form.description.id_for_label }}">Description</label>
+    {{ form.description }}
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.duration_minutes.id_for_label }}">Durée (minutes)</label>
+      {{ form.duration_minutes }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.passing_score.id_for_label }}">Seuil de réussite (%)</label>
+      {{ form.passing_score }}
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="{{ form.due_date.id_for_label }}">Échéance</label>
+    {{ form.due_date }}
+  </div>
+  <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+    {{ form.is_published }}
+    <label for="{{ form.is_published.id_for_label }}" style="margin:0;">Publier le quiz (notifie les étudiants inscrits)</label>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </div>
+</form>
+{% endblock %}
+

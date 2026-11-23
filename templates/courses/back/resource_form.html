@@ -1,0 +1,65 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}{{ title }} — UniSphere{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Module {{ course.code }} · parcours module : {{ course.get_level_display }}{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="form-card reveal">
+  {% csrf_token %}
+
+  <div class="form-group">
+    <label for="{{ form.title.id_for_label }}">Titre</label>
+    {{ form.title }}
+    {{ form.title.errors }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.resource_type.id_for_label }}">Type</label>
+      {{ form.resource_type }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.target_level.id_for_label }}">Niveau destiné *</label>
+      {{ form.target_level }}
+      <p class="help">Obligatoire — seuls les étudiants de ce parcours verront cette ressource.</p>
+      {{ form.target_level.errors }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.description.id_for_label }}">Description</label>
+    {{ form.description }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.file.id_for_label }}">Fichier</label>
+      {{ form.file }}
+      {{ form.file.errors }}
+      {% if resource and resource.file %}
+      <p class="help">Fichier actuel : {{ resource.file.name }}</p>
+      {% endif %}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.order.id_for_label }}">Ordre d’affichage</label>
+      {{ form.order }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.url.id_for_label }}">URL (liens / vidéos externes)</label>
+    {{ form.url }}
+    {{ form.url.errors }}
+  </div>
+
+  <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+    {{ form.is_required }}
+    <label for="{{ form.is_required.id_for_label }}" style="margin:0;">Ressource obligatoire</label>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{% url 'courses:back_course_detail' course.pk %}" class="btn btn-secondary">Annuler</a>
+  </div>
+</form>
+{% endblock %}

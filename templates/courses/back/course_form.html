@@ -1,0 +1,115 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}{{ title }} — UniSphere{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if mode == "create" %}Création d’un nouveau module{% else %}Édition · {{ course.code }}{% endif %}{% endblock %}
+{% block top_actions %}
+<a href="{% if course %}{% url 'courses:back_course_detail' course.pk %}{% else %}{% url 'courses:back_course_list' %}{% endif %}" class="btn btn-secondary btn-sm">Annuler</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="form-card reveal" style="max-width:860px;">
+  {% csrf_token %}
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.title.id_for_label }}">Titre du module</label>
+      {{ form.title }}
+      {{ form.title.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.code.id_for_label }}">Code</label>
+      {{ form.code }}
+      {{ form.code.errors }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.short_description.id_for_label }}">Résumé</label>
+    {{ form.short_description }}
+    {{ form.short_description.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.description.id_for_label }}">Description</label>
+    {{ form.description }}
+    {{ form.description.errors }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.category.id_for_label }}">Département *</label>
+      {{ form.category }}
+      <p class="help">Tronc-Commun · Informatique · EM · GC</p>
+      {{ form.category.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.level.id_for_label }}">Niveau destiné *</label>
+      {{ form.level }}
+      <p class="help">Les niveaux affichés dépendent du département choisi.</p>
+      {{ form.level.errors }}
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.status.id_for_label }}">Statut</label>
+      {{ form.status }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.duration_hours.id_for_label }}">Volume horaire</label>
+      {{ form.duration_hours }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.cover.id_for_label }}">Image de couverture</label>
+    {{ form.cover }}
+    {{ form.cover.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.prerequisites.id_for_label }}">Prérequis (texte libre)</label>
+    {{ form.prerequisites }}
+    <p class="help">Écrivez ce que ce module exige (compétences, cours, outils…) — aucun choix limité.</p>
+    {{ form.prerequisites.errors }}
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">{% if mode == "create" %}Créer le module{% else %}Enregistrer{% endif %}</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const DEPT_LEVELS = {{ dept_levels_json|default:"{}"|safe }};
+  const cat = document.getElementById("id_category");
+  const level = document.getElementById("id_level");
+  if (!cat || !level) return;
+
+  function refillLevels(keepValue) {
+    const list = DEPT_LEVELS[cat.value] || [];
+    const current = keepValue || level.value;
+    level.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = list.length
+      ? "Choisir un niveau"
+      : "Choisir d’abord un département";
+    level.appendChild(placeholder);
+    list.forEach(([code, label]) => {
+      const opt = document.createElement("option");
+      opt.value = code;
+      opt.textContent = label;
+      if (code === current) opt.selected = true;
+      level.appendChild(opt);
+    });
+  }
+
+  cat.addEventListener("change", () => refillLevels(""));
+  refillLevels(level.value);
+})();
+</script>
+{% endblock %}
+

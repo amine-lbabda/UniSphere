@@ -1,0 +1,116 @@
+{% extends "layouts/admin.html" %}
+{% load static %}
+{% block title %}Console admin — UniSphere{% endblock %}
+{% block page_title %}Dashboard global{% endblock %}
+{% block page_sub %}Vue d’ensemble de toute la plateforme universitaire{% endblock %}
+
+{% block content %}
+<div class="dash-grid">
+  <div class="dash-card dash-span-3 kpi"><span class="kpi-label">Utilisateurs</span><span class="kpi-value" data-count="{{ kpi.users }}">0</span></div>
+  <div class="dash-card dash-span-3 kpi"><span class="kpi-label">Modules</span><span class="kpi-value" data-count="{{ kpi.courses }}">0</span><span class="kpi-hint">{{ kpi.published }} publiés</span></div>
+  <div class="dash-card dash-span-3 kpi"><span class="kpi-label">Inscriptions</span><span class="kpi-value" data-count="{{ kpi.enrollments }}">0</span></div>
+  <div class="dash-card dash-span-3 kpi"><span class="kpi-label">Score moyen</span><span class="kpi-value">{{ kpi.avg_score }}%</span><span class="kpi-hint">{{ kpi.attempts }} tentatives</span></div>
+
+  <div class="dash-card dash-span-4">
+    <h3>Répartition des rôles</h3>
+    <div class="chart-wrap"><canvas id="chartRoles"></canvas></div>
+  </div>
+  <div class="dash-card dash-span-4">
+    <h3>Modules par statut</h3>
+    <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+  </div>
+  <div class="dash-card dash-span-4">
+    <h3>Réussite quiz</h3>
+    <div class="chart-wrap"><canvas id="chartPass"></canvas></div>
+  </div>
+
+  <div class="dash-card dash-span-8">
+    <h3>Activité plateforme (14 jours)</h3>
+    <div class="chart-wrap"><canvas id="chartActivity"></canvas></div>
+  </div>
+  <div class="dash-card dash-span-4">
+    <h3>Modules publiés / niveau</h3>
+    <div class="chart-wrap"><canvas id="chartLevels"></canvas></div>
+  </div>
+
+  <div class="dash-card dash-span-6">
+    <h3>Modules par département</h3>
+    <div class="chart-wrap"><canvas id="chartCats"></canvas></div>
+  </div>
+  <div class="dash-card dash-span-6">
+    <h3>Dernières tentatives</h3>
+    <div class="table-wrap" style="border:0;box-shadow:none;">
+      <table class="data-table table-compact">
+        <thead><tr><th>Étudiant</th><th>Quiz</th><th>Score</th></tr></thead>
+        <tbody>
+          {% for a in recent_attempts %}
+          <tr>
+            <td>{{ a.student.username }}</td>
+            <td>{{ a.quiz.course.code }}</td>
+            <td><strong>{{ a.score }}%</strong></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">Aucune tentative</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="dash-card dash-span-6">
+    <h3>Utilisateurs récents</h3>
+    <div class="table-wrap" style="border:0;box-shadow:none;">
+      <table class="data-table table-compact">
+        <thead><tr><th>User</th><th>Rôle</th><th></th></tr></thead>
+        <tbody>
+          {% for u in recent_users %}
+          <tr>
+            <td>{{ u.username }}</td>
+            <td>{% if u.profile %}{{ u.profile.get_role_display }}{% endif %}</td>
+            <td><a href="{% url 'courses:admin_user_edit' u.pk %}" class="btn btn-sm btn-ghost">Éditer</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="dash-card dash-span-6">
+    <h3>Modules récents</h3>
+    <div class="table-wrap" style="border:0;box-shadow:none;">
+      <table class="data-table table-compact">
+        <thead><tr><th>Code</th><th>Enseignant</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for c in recent_courses %}
+          <tr>
+            <td>{{ c.code }}</td>
+            <td>{{ c.instructor.username }}</td>
+            <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script id="raw-roles" type="application/json">{{ chart_roles|safe }}</script>
+<script id="raw-status" type="application/json">{{ chart_status|safe }}</script>
+<script id="raw-pass" type="application/json">{{ chart_pass|safe }}</script>
+<script id="raw-activity" type="application/json">{{ chart_activity|safe }}</script>
+<script id="raw-levels" type="application/json">{{ chart_levels|safe }}</script>
+<script id="raw-cats" type="application/json">{{ chart_categories|safe }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/charts.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  UniCharts.doughnut("chartRoles", "raw-roles");
+  UniCharts.doughnut("chartStatus", "raw-status");
+  UniCharts.doughnut("chartPass", "raw-pass");
+  UniCharts.line("chartActivity", "raw-activity", { color: "#845ef7", fill: "rgba(132,94,247,0.12)" });
+  UniCharts.bar("chartLevels", "raw-levels", { color: "rgba(34,184,207,0.85)" });
+  UniCharts.bar("chartCats", "raw-cats", { color: "rgba(59,91,219,0.8)" });
+});
+</script>
+{% endblock %}

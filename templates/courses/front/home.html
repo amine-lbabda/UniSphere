@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}UniSphere — Campus numérique{% endblock %}
+
+{% block content %}
+<section class="hero hero-wow">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="container hero-grid">
+    <div>
+      <div class="hero-kicker">
+        <span class="pulse-dot"></span>
+        Campus UniSphere · Espaces séparés
+      </div>
+      <h1>L’université,<br><em>réinventée</em></h1>
+      <p class="hero-lead">
+        Modules affectés par niveau, ressources vivantes, quiz chronométrés et notifications —
+        une expérience fluide pour étudiants et enseignants.
+      </p>
+      <div class="hero-cta">
+        {% if is_admin %}
+        <a href="{% url 'courses:admin_dashboard' %}" class="btn btn-primary btn-glow">Console admin</a>
+        <a href="{% url 'courses:back_dashboard' %}" class="btn btn-secondary">Vue enseignant</a>
+        {% elif is_student %}
+        <a href="{% url 'courses:student_dashboard' %}" class="btn btn-primary btn-glow">Ouvrir mon espace</a>
+        <a href="{% url 'courses:front_catalog' %}" class="btn btn-secondary">Mes modules</a>
+        {% elif is_teacher %}
+        <a href="{% url 'courses:back_dashboard' %}" class="btn btn-primary btn-glow">Espace enseignant</a>
+        <a href="{% url 'courses:back_course_create' %}" class="btn btn-secondary">Nouveau module</a>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-primary btn-glow">Se connecter</a>
+        <a href="#parcours" class="btn btn-secondary">Découvrir le parcours</a>
+        {% endif %}
+      </div>
+      <div class="trust-row reveal">
+        <div><strong data-count="{{ stats.courses }}">0</strong><span>modules</span></div>
+        <div><strong data-count="{{ stats.quizzes }}">0</strong><span>quiz</span></div>
+        <div><strong data-count="{{ stats.resources }}">0</strong><span>ressources</span></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="orbit-stage">
+        <div class="orbit-ring"></div>
+        <div class="orbit-ring orbit-ring-2"></div>
+        <div class="hero-panel glass-panel">
+          <div class="hero-panel-content">
+            <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere" class="hero-logo">
+            <p class="hero-panel-label">Campus UniSphere</p>
+            <h2>Un module · un responsable</h2>
+            <p>L’enseignant publie. L’étudiant de ce niveau reçoit. Simple, clair, automatique.</p>
+            <div class="flow-mini">
+              <span>Niveau</span>
+              <span class="flow-arrow">→</span>
+              <span>Modules</span>
+              <span class="flow-arrow">→</span>
+              <span>Quiz</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="parcours">
+  <div class="container">
+    <div class="section-head reveal">
+      <div>
+        <h2>Comment ça déroule</h2>
+        <p>Un parcours pensé pour une faculté réelle — sans confusion de rôles.</p>
+      </div>
+    </div>
+    <div class="journey-grid">
+      <article class="journey-card reveal">
+        <div class="journey-num">01</div>
+        <h3>Connexion par rôle</h3>
+        <p>Étudiant → espace consultation. Enseignant → back office. Jamais les mêmes pouvoirs.</p>
+      </article>
+      <article class="journey-card reveal">
+        <div class="journey-num">02</div>
+        <h3>Affectation par niveau</h3>
+        <p>1ère, 2ème, 3ème année : les modules publiés arrivent automatiquement dans le bon parcours.</p>
+      </article>
+      <article class="journey-card reveal">
+        <div class="journey-num">03</div>
+        <h3>Ressources & quiz</h3>
+        <p>L’enseignant enrichit le module. L’étudiant consulte, passe les évaluations, suit sa progression.</p>
+      </article>
+      <article class="journey-card reveal">
+        <div class="journey-num">04</div>
+        <h3>Notifications live</h3>
+        <p>Nouvelle ressource, échéance quiz, résultat — tout remonte dans le centre d’alertes.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+{% if categories %}
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="section-head reveal">
+      <div>
+        <h2>Départements</h2>
+        <p>Explorez par filière académique.</p>
+      </div>
+    </div>
+    <div class="cat-strip reveal">
+      {% for cat in categories %}
+      <a class="cat-pill" href="{% url 'courses:front_catalog' %}?category={{ cat.pk }}">
+        <span class="cat-dot" style="background:{{ cat.color }}"></span>
+        {{ cat.name }}
+        <span style="opacity:0.5;font-size:0.8rem;">{{ cat.course_count }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="section-head reveal">
+      <div>
+        <h2>{% if is_student %}Vos modules{% else %}Modules à la une{% endif %}</h2>
+        <p>{% if is_student %}Contenu de votre niveau scolaire.{% else %}Parcours publiés sur UniSphere.{% endif %}</p>
+      </div>
+      <a href="{% url 'courses:front_catalog' %}" class="btn btn-ghost">Voir tout →</a>
+    </div>
+
+    {% if featured %}
+    <div class="course-grid">
+      {% for course in featured %}
+      <a href="{{ course.get_absolute_url }}" class="course-card" data-tilt>
+        <div class="course-cover" {% if not course.cover %}style="background:linear-gradient(135deg, {{ course.category.color|default:'#3b5bdb' }}, #22b8cf 55%, #845ef7);"{% endif %}>
+          {% if course.cover %}
+          <img src="{{ course.cover.url }}" alt="{{ course.title }}">
+          {% else %}
+          <div class="course-cover-pattern"></div>
+          <span class="cover-code">{{ course.code }}</span>
+          {% endif %}
+        </div>
+        <div class="course-body">
+          <div class="course-meta">
+            <span class="chip">{{ course.get_level_display }}</span>
+            {% if course.category %}<span class="chip chip-amber">{{ course.category.name }}</span>{% endif %}
+          </div>
+          <h3>{{ course.title }}</h3>
+          <p class="excerpt">{{ course.short_description|default:course.description|truncatewords:18 }}</p>
+          <div class="course-footer">
+            <span>{{ course.instructor.get_full_name|default:course.instructor.username }}</span>
+            <span>{{ course.duration_hours }} h</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state reveal">
+      <div class="icon">📚</div>
+      <p>Aucun module publié pour le moment.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "layouts/app_shell.html" %}
+{% block body_class %}space-admin{% endblock %}
+{% block space_label %}Console admin{% endblock %}
+{% block brand_url %}{% url 'courses:admin_dashboard' %}{% endblock %}
+
+{% block sidebar %}
+<a href="{% url 'courses:admin_dashboard' %}" class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+  <span class="nav-ico">📊</span> Dashboard global
+</a>
+<a href="{% url 'courses:admin_users' %}" class="{% if 'admin_user' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">👥</span> Utilisateurs
+</a>
+<a href="{% url 'courses:admin_courses' %}" class="{% if 'admin_course' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">📚</span> Tous les modules
+</a>
+<a href="{% url 'courses:admin_resources' %}" class="{% if 'admin_resource' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">📎</span> Toutes les ressources
+</a>
+<a href="{% url 'courses:admin_quizzes' %}" class="{% if 'admin_quiz' in request.resolver_match.url_name or 'admin_question' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">📝</span> Tous les quiz
+</a>
+<a href="{% url 'courses:admin_enrollments' %}" class="{% if request.resolver_match.url_name == 'admin_enrollments' %}active{% endif %}">
+  <span class="nav-ico">🔗</span> Inscriptions
+</a>
+<a href="{% url 'courses:admin_categories' %}" class="{% if 'admin_categor' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico">🏷️</span> Départements
+</a>
+<a href="{% url 'courses:admin_notifications' %}" class="{% if request.resolver_match.url_name == 'admin_notifications' %}active{% endif %}">
+  <span class="nav-ico">📣</span> Diffuser une alerte
+</a>
+<a href="/admin/" target="_blank">
+  <span class="nav-ico">⚙️</span> Django Admin
+</a>
+<a href="{% url 'courses:back_dashboard' %}">
+  <span class="nav-ico">🎓</span> Vue enseignant
+</a>
+{% endblock %}

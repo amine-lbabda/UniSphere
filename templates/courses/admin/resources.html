@@ -1,0 +1,43 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Ressources — Console{% endblock %}
+{% block page_title %}Toutes les ressources{% endblock %}
+{% block page_sub %}CRUD complet · tous les modules{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:1rem;">
+  <div></div>
+  <a href="{% url 'courses:admin_resource_create' %}" class="btn btn-primary">+ Nouvelle ressource</a>
+</div>
+
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Titre</th><th>Module</th><th>Type</th><th>Niveau</th>
+        <th>Ordre</th><th>Oblig.</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in resources %}
+      <tr>
+        <td><strong>{{ r.title }}</strong></td>
+        <td>{{ r.course.code }} — {{ r.course.title }}</td>
+        <td>{{ r.get_resource_type_display }}</td>
+        <td>{{ r.get_target_level_display }}</td>
+        <td>{{ r.order }}</td>
+        <td>{% if r.is_required %}Oui{% else %}—{% endif %}</td>
+        <td class="actions">
+          <a class="btn btn-sm btn-ghost" href="{% url 'courses:admin_resource_edit' r.pk %}">Modifier</a>
+          <form method="post" action="{% url 'courses:admin_resource_delete' r.pk %}" style="display:inline;" data-confirm="Supprimer « {{ r.title }} » ?">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-danger" type="submit">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">Aucune ressource.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

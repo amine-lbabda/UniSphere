@@ -1,0 +1,251 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}Mes modules — UniSphere{% endblock %}
+{% block page_title %}Mes modules{% endblock %}
+{% block page_sub %}CRUD complet · créer, modifier, publier, supprimer{% endblock %}
+{% block top_actions %}
+<a href="{% url 'courses:back_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ Nouveau module</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Layout forcé — stats + filtres en lignes */
+  .ml-stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+  .ml-stat {
+    background: #fff;
+    border: 1px solid rgba(11,31,42,.08);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 22px rgba(11,31,42,.045);
+    min-height: 74px;
+  }
+  .ml-stat .ml-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+  .ml-stat .ml-num {
+    display: block;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: #0b1f2a;
+  }
+  .ml-stat.pub .ml-num { color: #0f766e; }
+  .ml-stat.draft .ml-num { color: #b45309; }
+
+  .ml-filters {
+    display: grid;
+    grid-template-columns: 1.4fr auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid rgba(11,31,42,.08);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 22px rgba(11,31,42,.045);
+  }
+  .ml-filters .ml-search {
+    width: 100%;
+    margin: 0;
+  }
+  .ml-chips {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .ml-chip {
+    border: 1px solid rgba(11,31,42,.12);
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ml-chip.is-on {
+    background: linear-gradient(135deg, #3b5bdb, #22b8cf);
+    border-color: transparent;
+    color: #fff;
+  }
+  .ml-selects {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ml-selects select {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0;
+  }
+  .ml-filter-btn { white-space: nowrap; }
+
+  .ml-actions {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  @media (max-width: 1100px) {
+    .ml-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ml-filters { grid-template-columns: 1fr; }
+    .ml-selects { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .ml-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ml-stats">
+  <div class="ml-stat">
+    <span class="ml-label">Total</span>
+    <span class="ml-num" data-count="{{ stats.total }}">0</span>
+  </div>
+  <div class="ml-stat pub">
+    <span class="ml-label">Publiés</span>
+    <span class="ml-num" data-count="{{ stats.published }}">0</span>
+  </div>
+  <div class="ml-stat draft">
+    <span class="ml-label">Brouillons</span>
+    <span class="ml-num" data-count="{{ stats.draft }}">0</span>
+  </div>
+  <div class="ml-stat">
+    <span class="ml-label">Étudiants</span>
+    <span class="ml-num" data-count="{{ stats.students }}">0</span>
+  </div>
+  <div class="ml-stat">
+    <span class="ml-label">Ressources</span>
+    <span class="ml-num" data-count="{{ stats.resources }}">0</span>
+  </div>
+  <div class="ml-stat">
+    <span class="ml-label">Quiz</span>
+    <span class="ml-num" data-count="{{ stats.quizzes }}">0</span>
+  </div>
+</div>
+
+<form method="get" class="ml-filters" id="ml-filter-form">
+  <input type="search" id="mod-live-q" name="q" value="{{ request.GET.q }}" class="form-control ml-search" placeholder="Recherche (code, titre, niveau…)" autocomplete="off">
+
+  <div class="ml-chips" id="mod-status-chips">
+    <button type="button" class="ml-chip is-on" data-status="">Tous</button>
+    <button type="button" class="ml-chip" data-status="published">Publiés</button>
+    <button type="button" class="ml-chip" data-status="draft">Brouillons</button>
+    <button type="button" class="ml-chip" data-status="archived">Archivés</button>
+  </div>
+
+  <div class="ml-selects">
+    {{ form.category }}
+    {{ form.level }}
+  </div>
+
+  <button type="submit" class="btn btn-secondary btn-sm ml-filter-btn">Filtrer</button>
+</form>
+
+{% if courses %}
+<div class="table-wrap">
+  <table class="data-table" id="mod-grid">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Module</th>
+        <th>Niveau</th>
+        <th>Département</th>
+        <th>Statut</th>
+        <th>Étud.</th>
+        <th>Ress.</th>
+        <th>Quiz</th>
+        <th>Vol.</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in courses %}
+      <tr
+        class="mod-row"
+        data-status="{{ c.status }}"
+        data-search="{{ c.code }} {{ c.title }} {{ c.get_level_display }} {{ c.category.name|default:'' }}"
+      >
+        <td><strong>{{ c.code }}</strong></td>
+        <td>
+          <a href="{% url 'courses:back_course_detail' c.pk %}" style="font-weight:650;color:inherit;">{{ c.title }}</a>
+          {% if c.short_description %}<div style="font-size:0.78rem;color:var(--slate);margin-top:0.15rem;">{{ c.short_description|truncatewords:10 }}</div>{% endif %}
+        </td>
+        <td><span class="chip">{{ c.get_level_display }}</span></td>
+        <td>{% if c.category %}{{ c.category.name }}{% else %}—{% endif %}</td>
+        <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
+        <td>{{ c.student_count }}</td>
+        <td>{{ c.res_count }}</td>
+        <td>{{ c.quiz_count }}</td>
+        <td>{{ c.duration_hours }} h</td>
+        <td>
+          <div class="ml-actions">
+            <a href="{% url 'courses:back_course_detail' c.pk %}" class="btn btn-sm btn-primary">Ouvrir</a>
+            <a href="{% url 'courses:back_course_edit' c.pk %}" class="btn btn-sm btn-secondary">Modifier</a>
+            <form method="post" action="{% url 'courses:back_course_delete' c.pk %}" data-confirm="Supprimer définitivement « {{ c.code }} — {{ c.title }} » ?">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p id="mod-empty-filter" hidden style="text-align:center;color:var(--slate);padding:1.25rem;">Aucun module ne correspond à votre recherche.</p>
+{% else %}
+<div class="empty-state">
+  <div class="icon">📚</div>
+  <p>Aucun module pour l’instant.</p>
+  <a href="{% url 'courses:back_course_create' %}" class="btn btn-primary" style="margin-top:1rem;">Créer mon premier module</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const rows = [...document.querySelectorAll("#mod-grid .mod-row")];
+  const qInput = document.getElementById("mod-live-q");
+  const empty = document.getElementById("mod-empty-filter");
+  let status = "";
+
+  const apply = () => {
+    if (!rows.length) return;
+    const q = (qInput?.value || "").trim().toLowerCase();
+    let visible = 0;
+    rows.forEach((row) => {
+      const okStatus = !status || row.dataset.status === status;
+      const okQ = !q || (row.dataset.search || "").toLowerCase().includes(q);
+      const show = okStatus && okQ;
+      row.hidden = !show;
+      if (show) visible += 1;
+    });
+    if (empty) empty.hidden = visible > 0;
+  };
+
+  qInput?.addEventListener("input", apply);
+  document.querySelectorAll("#mod-status-chips .ml-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll("#mod-status-chips .ml-chip").forEach((c) => c.classList.remove("is-on"));
+      chip.classList.add("is-on");
+      status = chip.dataset.status || "";
+      apply();
+    });
+  });
+});
+</script>
+{% endblock %}

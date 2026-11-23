@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Créer un compte étudiant — UniSphere{% endblock %}
+
+{% block content %}
+<div class="login-page">
+  <div class="login-card reveal" style="width:min(520px,100%);">
+    <div class="brand" style="margin-bottom:1rem;">
+      <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere" class="brand-logo">
+      <span>UniSphere</span>
+    </div>
+    <h1>Inscription étudiant</h1>
+    <p class="sub">Choisissez votre filière puis votre année / spécialité — les modules correspondants vous seront affectés automatiquement.</p>
+
+    <form method="post" id="signup-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="alert alert-error" style="position:static;margin-bottom:1rem;box-shadow:none;">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="{{ form.first_name.id_for_label }}">Prénom</label>
+          {{ form.first_name }}
+          {{ form.first_name.errors }}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.last_name.id_for_label }}">Nom</label>
+          {{ form.last_name }}
+          {{ form.last_name.errors }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="{{ form.username.id_for_label }}">Identifiant</label>
+        {{ form.username }}
+        {{ form.username.errors }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.email.id_for_label }}">Email</label>
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.student_id.id_for_label }}">Matricule</label>
+        {{ form.student_id }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_filiere">Filière</label>
+        {{ form.filiere }}
+        <p class="help">Informatique · Électromécanique · Génie Civil</p>
+      </div>
+      <div class="form-group">
+        <label for="id_academic_level">Année / spécialité</label>
+        {{ form.academic_level }}
+        {{ form.academic_level.errors }}
+        <p class="help">Ex. 1A/2A (TC), 3IA, 4A-Fintech, 1EM…4EM-OGI, 1GC…5GC</p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="{{ form.password1.id_for_label }}">Mot de passe</label>
+          {{ form.password1 }}
+          {{ form.password1.errors }}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.password2.id_for_label }}">Confirmation</label>
+          {{ form.password2 }}
+          {{ form.password2.errors }}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-glow" style="width:100%;margin-top:0.5rem;">Créer mon compte</button>
+    </form>
+    <p style="margin:1.1rem 0 0;text-align:center;font-size:0.9rem;color:var(--slate);">
+      Déjà inscrit ? <a href="{% url 'login' %}">Connexion</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROGRAMS = {{ programs_json|safe }};
+const filiere = document.getElementById("id_filiere");
+const program = document.getElementById("id_academic_level");
+
+function refillPrograms() {
+  const key = filiere.value;
+  const list = PROGRAMS[key] || [];
+  const current = program.value;
+  program.innerHTML = "";
+  list.forEach(([code, label]) => {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = label;
+    if (code === current) opt.selected = true;
+    program.appendChild(opt);
+  });
+}
+filiere.addEventListener("change", refillPrograms);
+refillPrograms();
+</script>
+{% endblock %}

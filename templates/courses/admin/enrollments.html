@@ -1,0 +1,30 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Inscriptions — Console{% endblock %}
+{% block page_title %}Inscriptions{% endblock %}
+{% block page_sub %}Affectations étudiants ↔ modules{% endblock %}
+
+{% block content %}
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead><tr><th>Étudiant</th><th>Module</th><th>Enseignant</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+      {% for e in enrollments %}
+      <tr>
+        <td>{{ e.student.get_full_name|default:e.student.username }}</td>
+        <td>{{ e.course.code }} — {{ e.course.title }}</td>
+        <td>{{ e.course.instructor.username }}</td>
+        <td>{{ e.enrolled_at|date:"d/m/Y" }}</td>
+        <td>
+          <form method="post" action="{% url 'courses:admin_enrollment_delete' e.pk %}" data-confirm="Supprimer cette inscription ?">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-danger" type="submit">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">Aucune inscription</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

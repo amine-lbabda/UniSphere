@@ -1,0 +1,31 @@
+{% extends layout %}
+{% block title %}Notifications — UniSphere{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block page_sub %}Alertes liées à votre espace{% endblock %}
+
+{% block content %}
+{% if notifications %}
+<form method="post" action="{% url 'courses:front_notifications_read_all' %}" style="margin-bottom:1rem;">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-secondary btn-sm">Tout marquer comme lu</button>
+</form>
+<ul class="notif-list reveal">
+  {% for n in notifications %}
+  <li class="notif-item {% if not n.is_read %}unread{% endif %}">
+    <span class="notif-dot {{ n.level }}"></span>
+    <div style="flex:1;">
+      <strong>{{ n.title }}</strong>
+      <p style="margin:0.25rem 0;color:var(--slate);font-size:0.92rem;">{{ n.message }}</p>
+      <small style="color:var(--slate);">{{ n.created_at|date:"d/m/Y H:i" }}</small>
+    </div>
+    <form method="post" action="{% url 'courses:front_notification_read' n.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-secondary">{% if n.link %}Ouvrir{% else %}Lu{% endif %}</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty-state"><div class="icon">🔔</div><p>Aucune notification.</p></div>
+{% endif %}
+{% endblock %}

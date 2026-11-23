@@ -1,0 +1,24 @@
+{% extends "layouts/teacher.html" %}
+{% block title %}Étudiants — Enseignant{% endblock %}
+{% block page_title %}Mes étudiants{% endblock %}
+{% block page_sub %}Inscrits à vos modules{% endblock %}
+
+{% block content %}
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead><tr><th>Étudiant</th><th>Niveau</th><th>Module</th><th>Inscription</th></tr></thead>
+    <tbody>
+      {% for e in enrollments %}
+      <tr>
+        <td>{{ e.student.get_full_name|default:e.student.username }}</td>
+        <td>{% if e.student.profile %}{{ e.student.profile.get_academic_level_display }}{% endif %}</td>
+        <td>{{ e.course.code }}</td>
+        <td>{{ e.enrolled_at|date:"d/m/Y" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">Aucun étudiant inscrit pour l’instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

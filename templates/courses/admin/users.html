@@ -1,0 +1,26 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Utilisateurs — Console{% endblock %}
+{% block page_title %}Utilisateurs{% endblock %}
+{% block page_sub %}Gérer rôles, niveaux scolaires et accès{% endblock %}
+
+{% block content %}
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead>
+      <tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Niveau</th><th>Actif</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td><strong>{{ u.username }}</strong></td>
+        <td>{{ u.get_full_name|default:"—" }}</td>
+        <td>{% if u.profile %}<span class="chip">{{ u.profile.get_role_display }}</span>{% endif %}</td>
+        <td>{% if u.profile and u.profile.academic_level %}{{ u.profile.get_academic_level_display }}{% if u.profile.filiere_display %} <span class="chip">{{ u.profile.filiere_display }}</span>{% endif %}{% else %}—{% endif %}</td>
+        <td>{% if u.is_active %}Oui{% else %}Non{% endif %}</td>
+        <td><a href="{% url 'courses:admin_user_edit' u.pk %}" class="btn btn-sm btn-secondary">Modifier</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

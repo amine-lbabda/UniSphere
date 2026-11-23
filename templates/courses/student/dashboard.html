@@ -1,0 +1,94 @@
+{% extends "layouts/student.html" %}
+{% load static %}
+{% block title %}Dashboard étudiant — UniSphere{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}{{ profile.filiere_display }} · {{ profile.get_academic_level_display }} · progression & évaluations{% endblock %}
+
+{% block content %}
+<div class="dash-grid">
+  <div class="dash-card dash-span-3 kpi reveal">
+    <span class="kpi-label">Progression moyenne</span>
+    <span class="kpi-value" data-count="{{ avg_progress }}">0</span>
+    <span class="kpi-hint">sur vos modules affectés</span>
+  </div>
+  <div class="dash-card dash-span-3 kpi reveal">
+    <span class="kpi-label">Modules</span>
+    <span class="kpi-value" data-count="{{ course_cards|length }}">0</span>
+    <span class="kpi-hint">{{ profile.get_academic_level_display }}</span>
+  </div>
+  <div class="dash-card dash-span-3 kpi reveal">
+    <span class="kpi-label">Quiz ouverts</span>
+    <span class="kpi-value" data-count="{{ quizzes|length }}">0</span>
+    <span class="kpi-hint">{{ upcoming|length }} échéance{{ upcoming|length|pluralize }}</span>
+  </div>
+  <div class="dash-card dash-span-3 kpi reveal">
+    <span class="kpi-label">Score moyen</span>
+    <span class="kpi-value">{{ avg_score }}%</span>
+    <span class="kpi-hint">sur vos tentatives</span>
+  </div>
+
+  <div class="dash-card dash-span-8 reveal">
+    <h3>Progression par module (%)</h3>
+    <div class="chart-wrap"><canvas id="chartProgress"></canvas></div>
+  </div>
+  <div class="dash-card dash-span-4 reveal">
+    <h3>Réussite quiz</h3>
+    <div class="chart-wrap"><canvas id="chartPass"></canvas></div>
+  </div>
+
+  <div class="dash-card dash-span-8 reveal">
+    <h3>Évolution des scores</h3>
+    <div class="chart-wrap"><canvas id="chartScores"></canvas></div>
+  </div>
+  <div class="dash-card dash-span-4 reveal">
+    <h3>Échéances à venir</h3>
+    {% for q in upcoming %}
+    <a href="{% url 'courses:front_quiz_take' q.pk %}" class="quiz-card" style="margin-bottom:0.55rem;">
+      <strong style="font-size:0.9rem;">{{ q.title }}</strong>
+      <p style="margin:0.2rem 0 0;color:var(--slate);font-size:0.8rem;">{{ q.course.code }} · {{ q.due_date|date:"d/m H:i" }}</p>
+    </a>
+    {% empty %}
+    <p style="color:var(--slate);font-size:0.9rem;">Aucune échéance proche.</p>
+    {% endfor %}
+  </div>
+
+  <div class="dash-card dash-span-12 reveal">
+    <h3>Mes modules</h3>
+    <div class="course-grid">
+      {% for item in course_cards %}
+      <a href="{{ item.course.get_absolute_url }}" class="course-card progress-card">
+        <div class="course-cover" style="height:110px;background:linear-gradient(135deg, {{ item.course.category.color|default:'#3b5bdb' }}, #22b8cf);">
+          <div class="course-cover-pattern"></div>
+          <span class="progress-pill">{{ item.progress.percent }}%</span>
+        </div>
+        <div class="course-body">
+          <h3>{{ item.course.title }}</h3>
+          <div class="bar-track"><div class="bar-fill" style="width:{{ item.progress.percent }}%"></div></div>
+          <div class="course-footer">
+            <span>{{ item.course.code }}</span>
+            <span>{{ item.progress.label }}</span>
+          </div>
+        </div>
+      </a>
+      {% empty %}
+      <p style="color:var(--slate);">Aucun module pour votre niveau.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script id="raw-progress" type="application/json">{{ chart_progress|safe }}</script>
+<script id="raw-scores" type="application/json">{{ chart_scores|safe }}</script>
+<script id="raw-pass" type="application/json">{{ chart_pass|safe }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/charts.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  UniCharts.bar("chartProgress", "raw-progress", { label: "Progression %", max: 100, color: "rgba(34,184,207,0.85)" });
+  UniCharts.line("chartScores", "raw-scores", { label: "Score", max: 100, color: "#845ef7", fill: "rgba(132,94,247,0.12)" });
+  UniCharts.doughnut("chartPass", "raw-pass");
+});
+</script>
+{% endblock %}
