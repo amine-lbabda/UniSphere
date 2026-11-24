@@ -1,43 +1,83 @@
 {% extends "layouts/admin.html" %}
-{% block title %}Ressources — Console{% endblock %}
-{% block page_title %}Toutes les ressources{% endblock %}
-{% block page_sub %}CRUD complet · tous les modules{% endblock %}
+{% block title %}Resources — Control Center{% endblock %}
+{% block page_title %}Resources{% endblock %}
+{% block page_sub %}All materials across every course{% endblock %}
+{% block admin_actions %}
+<a href="{% url 'courses:admin_resource_create' %}" class="btn btn-primary btn-sm btn-glow">+ New resource</a>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom:1rem;">
-  <div></div>
-  <a href="{% url 'courses:admin_resource_create' %}" class="btn btn-primary">+ Nouvelle ressource</a>
-</div>
+{% if resources %}
+<section class="reslib-stats" aria-label="Resource counts">
+  <div class="reslib-stat"><span>Total</span><strong data-count="{{ resources|length }}">0</strong></div>
+</section>
 
-<div class="table-wrap reveal">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Titre</th><th>Module</th><th>Type</th><th>Niveau</th>
-        <th>Ordre</th><th>Oblig.</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in resources %}
-      <tr>
-        <td><strong>{{ r.title }}</strong></td>
-        <td>{{ r.course.code }} — {{ r.course.title }}</td>
-        <td>{{ r.get_resource_type_display }}</td>
-        <td>{{ r.get_target_level_display }}</td>
-        <td>{{ r.order }}</td>
-        <td>{% if r.is_required %}Oui{% else %}—{% endif %}</td>
-        <td class="actions">
-          <a class="btn btn-sm btn-ghost" href="{% url 'courses:admin_resource_edit' r.pk %}">Modifier</a>
-          <form method="post" action="{% url 'courses:admin_resource_delete' r.pk %}" style="display:inline;" data-confirm="Supprimer « {{ r.title }} » ?">
-            {% csrf_token %}
-            <button class="btn btn-sm btn-danger" type="submit">Supprimer</button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="7">Aucune ressource.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<form class="reslib-toolbar" onsubmit="return false;">
+  <input
+    type="search"
+    id="res-live-q"
+    class="form-control"
+    placeholder="Search resources…"
+    aria-label="Search resources"
+  >
+</form>
+
+<div class="reslib-grid" id="res-grid">
+  {% for r in resources %}
+  <article class="reslib-card reveal" data-search="{{ r.title }} {{ r.course.code }} {{ r.course.title }} {{ r.get_resource_type_display }} {{ r.course.instructor.get_full_name|default:r.course.instructor.username }}">
+    <div class="reslib-card-face" data-type="{{ r.resource_type }}" aria-hidden="true">
+      <span class="reslib-card-ico">{{ r.type_icon }}</span>
+    </div>
+    <div class="reslib-card-body">
+      <h3><a href="{% url 'courses:admin_resource_edit' r.pk %}" style="color:inherit;text-decoration:none;">{{ r.title }}</a></h3>
+      <div class="reslib-card-meta">
+        {{ r.get_resource_type_display }} · {{ r.course.code }}
+        <br>Teacher: {{ r.course.instructor.get_full_name|default:r.course.instructor.username }}
+      </div>
+      <div class="reslib-card-foot">
+        <span class="studio-state" data-state="{{ r.studio_state }}">{{ r.studio_state_label }}</span>
+        {% if r.is_required %}<span class="chip">Required</span>{% endif %}
+      </div>
+      <div class="reslib-card-actions">
+        <a href="{% url 'courses:admin_resource_edit' r.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+        <form method="post" action="{% url 'courses:admin_resource_delete' r.pk %}" data-confirm="Delete « {{ r.title }} » ?">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
 </div>
+<p id="res-empty-filter" hidden class="studio-empty-inline" style="text-align:center;padding:1.5rem;">No resources match your search.</p>
+{% else %}
+<div class="empty-state reveal">
+  <div class="icon">📁</div>
+  <p><strong>No resources yet.</strong></p>
+  <p>Upload materials for any course on the platform.</p>
+  <a href="{% url 'courses:admin_resource_create' %}" class="btn btn-primary" style="margin-top:1rem;">+ New resource</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cards = [...document.querySelectorAll("#res-grid .reslib-card")];
+  const qInput = document.getElementById("res-live-q");
+  const empty = document.getElementById("res-empty-filter");
+  if (!qInput) return;
+  qInput.addEventListener("input", () => {
+    const q = (qInput.value || "").toLowerCase().trim();
+    let shown = 0;
+    cards.forEach((card) => {
+      const hay = (card.getAttribute("data-search") || "").toLowerCase();
+      const ok = !q || hay.includes(q);
+      card.hidden = !ok;
+      if (ok) shown += 1;
+    });
+    if (empty) empty.hidden = shown > 0 || !cards.length;
+  });
+});
+</script>
 {% endblock %}

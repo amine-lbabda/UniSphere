@@ -1,0 +1,135 @@
+{% extends "layouts/teacher.html" %}
+{% load static %}
+{% block title %}Course Builder — {{ course.title }}{% endblock %}
+{% block page_title %}Course Builder{% endblock %}
+{% block page_sub %}Organize {{ course.code }} as an academic book{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_course_detail' course.pk %}" class="btn btn-ghost btn-sm">← Course</a>
+<a href="{% url 'courses:back_course_preview' course.pk %}" class="btn btn-secondary btn-sm">Preview as student</a>
+<button type="button" class="btn btn-primary btn-sm" id="builder-save-now">Save structure</button>
+{% endblock %}
+
+{% block teacher_css %}
+<link rel="stylesheet" href="{% static 'css/course-builder.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div
+  id="course-builder"
+  class="builder-shell"
+  data-reorder-url="{% url 'courses:back_course_builder_reorder' course.pk %}"
+  data-create-url="{% url 'courses:back_chapter_create' course.pk %}"
+  data-rename-url-template="{% url 'courses:back_chapter_rename' 0 %}"
+  data-delete-url-template="{% url 'courses:back_chapter_delete' 0 %}"
+>
+  <header class="builder-hero reveal">
+    <div>
+      <p class="builder-eyebrow">Academic Studio · Organize</p>
+      <h2>📘 {{ course.title }}</h2>
+      <p>Drag chapters and items to shape the student journey. Order is saved to the database.</p>
+      <p class="builder-save-status" id="builder-save-status" aria-live="polite"></p>
+    </div>
+    <div class="builder-hero-actions">
+      <a href="{% url 'courses:back_resource_create' course.pk %}" class="btn btn-secondary btn-sm">+ Resource</a>
+      <a href="{% url 'courses:back_quiz_create' course.pk %}" class="btn btn-secondary btn-sm">+ Quiz</a>
+      <a href="{% url 'courses:back_course_detail' course.pk %}" class="btn btn-ghost btn-sm">Manage course</a>
+    </div>
+  </header>
+
+  <div class="builder-book reveal">
+    <div class="builder-cover-strip" aria-hidden="true">
+      <div>
+        <strong>{{ course.code }} — {{ course.title }}</strong>
+        <div><span>Cover → Chapters → Resources → Quizzes</span></div>
+      </div>
+    </div>
+
+    <div class="builder-chapters-list" id="builder-chapters">
+      {% for ch in chapters %}
+      <section
+        class="builder-chapter"
+        data-chapter-id="{{ ch.id }}"
+        data-rename-url="{% url 'courses:back_chapter_rename' ch.id %}"
+        data-delete-url="{% url 'courses:back_chapter_delete' ch.id %}"
+      >
+        <div class="builder-chapter-head">
+          <span class="builder-chapter-handle" aria-hidden="true">☰</span>
+          <span class="builder-chapter-label">Chapter {{ ch.index }}</span>
+          <input
+            class="builder-chapter-title"
+            type="text"
+            value="{{ ch.title }}"
+            aria-label="Chapter title"
+          >
+          <div class="builder-chapter-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-delete-chapter>Remove</button>
+          </div>
+        </div>
+        <ul class="builder-item-list" data-list="chapter">
+          {% for item in ch.items %}
+          <li
+            class="builder-item"
+            draggable="true"
+            data-type="{{ item.type }}"
+            data-id="{{ item.id }}"
+          >
+            <span class="builder-item-handle" aria-hidden="true">☰</span>
+            <span class="builder-item-ico" aria-hidden="true">{{ item.icon }}</span>
+            <div class="builder-item-body">
+              <strong>{{ item.title }}</strong>
+              <small>{{ item.meta }}{% if not item.visible %} · hidden{% endif %}</small>
+            </div>
+            <a class="builder-item-link" href="{{ item.edit_url }}">Open</a>
+          </li>
+          {% empty %}
+          <li class="builder-empty-hint">Drop resources or quizzes here</li>
+          {% endfor %}
+          {% if ch.items %}
+          <li class="builder-empty-hint" hidden>Drop resources or quizzes here</li>
+          {% endif %}
+        </ul>
+      </section>
+      {% empty %}
+      {% endfor %}
+    </div>
+
+    <form class="builder-add-row" id="builder-add-chapter">
+      <input class="form-control" type="text" name="title" placeholder="New chapter title…" aria-label="New chapter title">
+      <button type="submit" class="btn btn-primary btn-sm">+ Add chapter</button>
+    </form>
+
+    <section class="builder-unassigned" aria-label="Unassigned items">
+      <h3>Unassigned</h3>
+      <p class="help" style="margin:0 0 0.55rem;">Resources and quizzes not yet placed in a chapter. Drag them into a chapter.</p>
+      <ul class="builder-item-list" id="builder-unassigned-list" data-list="unassigned">
+        {% for item in unassigned %}
+        <li
+          class="builder-item"
+          draggable="true"
+          data-type="{{ item.type }}"
+          data-id="{{ item.id }}"
+        >
+          <span class="builder-item-handle" aria-hidden="true">☰</span>
+          <span class="builder-item-ico" aria-hidden="true">{{ item.icon }}</span>
+          <div class="builder-item-body">
+            <strong>{{ item.title }}</strong>
+            <small>{{ item.meta }}{% if not item.visible %} · hidden{% endif %}</small>
+          </div>
+          <a class="builder-item-link" href="{{ item.edit_url }}">Open</a>
+        </li>
+        {% empty %}
+        <li class="builder-empty-hint">All items are organized in chapters.</li>
+        {% endfor %}
+        {% if unassigned %}
+        <li class="builder-empty-hint" hidden>All items are organized in chapters.</li>
+        {% endif %}
+      </ul>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block teacher_js %}
+<script src="{% static 'js/course-builder.js' %}"></script>
+{% endblock %}

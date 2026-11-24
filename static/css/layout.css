@@ -1,0 +1,132 @@
+/* ─── Student layout: shell grid, header, mobile nav ─── */
+
+.space-student .app-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.desk-nav-toggle {
+  display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  background: #fff;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--desk-text, #1e293b);
+}
+.desk-nav-toggle svg { width: 20px; height: 20px; }
+
+.desk-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 80;
+  border: 0;
+  cursor: pointer;
+}
+
+.space-student .living-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.space-student .living-bg span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.35;
+  will-change: transform;
+  transition: transform 0.6s ease-out;
+}
+.space-student .living-bg .b1 {
+  width: 420px; height: 420px;
+  background: #5b5ce2;
+  top: -120px; left: 18%;
+  animation: liveDrift 28s ease-in-out infinite;
+}
+.space-student .living-bg .b2 {
+  width: 360px; height: 360px;
+  background: #06b6d4;
+  bottom: -80px; right: 8%;
+  animation: liveDrift 34s ease-in-out infinite reverse;
+}
+.space-student .living-bg .b3 {
+  width: 280px; height: 280px;
+  background: #7c3aed;
+  top: 42%; left: -60px;
+  opacity: 0.22;
+  animation: liveDrift 40s ease-in-out infinite;
+}
+
+@keyframes liveDrift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(24px, -18px); }
+}
+
+.space-student .app-shell,
+.space-student .app-main {
+  position: relative;
+  z-index: 1;
+}
+
+.page-enter {
+  animation: pageEnter 0.28s ease both;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 900px) {
+  .desk-nav-toggle { display: inline-flex; }
+
+  .space-student .app-shell {
+    grid-template-columns: 1fr !important;
+  }
+  .space-student .app-sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(280px, 86vw) !important;
+    height: 100vh !important;
+    z-index: 90;
+    transform: translateX(-105%);
+    transition: transform 0.28s ease;
+  }
+  .space-student.nav-open .app-sidebar {
+    transform: translateX(0);
+  }
+  .space-student.nav-open .desk-nav-backdrop {
+    display: block;
+  }
+  .space-student .app-brand div,
+  .space-student .app-side-nav a,
+  .space-student .app-side-foot {
+    display: initial;
+    font-size: inherit;
+  }
+  .space-student .app-side-nav a {
+    font-size: 0.9rem;
+    justify-content: flex-start;
+    padding: 0.72rem 0.85rem;
+  }
+  .space-student .app-brand strong,
+  .space-student .app-brand small {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-student .living-bg span { animation: none !important; }
+  .page-enter { animation: none !important; }
+}

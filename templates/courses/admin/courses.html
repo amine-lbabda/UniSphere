@@ -1,53 +1,121 @@
 {% extends "layouts/admin.html" %}
-{% block title %}Modules — Console{% endblock %}
-{% block page_title %}Tous les modules{% endblock %}
-{% block page_sub %}CRUD complet · tous les enseignants{% endblock %}
+{% block title %}Courses — Control Center{% endblock %}
+{% block page_title %}Courses{% endblock %}
+{% block page_sub %}All courses across every instructor{% endblock %}
+{% block admin_actions %}
+<a href="{% url 'courses:admin_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ New course</a>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom:1rem;">
-  <div></div>
-  <a href="{% url 'courses:admin_course_create' %}" class="btn btn-primary">+ Nouveau module</a>
-</div>
+{% if courses %}
+<section class="studio-course-stats" aria-label="Course counts">
+  <div class="studio-course-stat">
+    <span>Total</span>
+    <strong data-count="{{ courses|length }}">0</strong>
+  </div>
+</section>
 
-<div class="table-wrap reveal">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Code</th><th>Titre</th><th>Enseignant</th><th>Niveau</th>
-        <th>Statut</th><th>Étud.</th><th>Ress.</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in courses %}
-      <tr>
-        <td><strong>{{ c.code }}</strong></td>
-        <td>{{ c.title }}</td>
-        <td>{{ c.instructor.get_full_name|default:c.instructor.username }}</td>
-        <td>{{ c.get_level_display }}</td>
-        <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
-        <td>{{ c.student_count }}</td>
-        <td>{{ c.res_count }}</td>
-        <td class="actions">
-          <a class="btn btn-sm btn-ghost" href="{% url 'courses:admin_course_edit' c.pk %}">Modifier</a>
-          {% for val, label in c.Status.choices %}
-          {% if c.status != val %}
-          <form method="post" action="{% url 'courses:admin_course_status' c.pk %}" style="display:inline;">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="{{ val }}">
-            <button class="btn btn-sm btn-ghost" type="submit">{{ label }}</button>
-          </form>
-          {% endif %}
-          {% endfor %}
-          <form method="post" action="{% url 'courses:admin_course_delete' c.pk %}" style="display:inline;" data-confirm="Supprimer définitivement {{ c.code }} ?">
-            {% csrf_token %}
-            <button class="btn btn-sm btn-danger" type="submit">Supprimer</button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="8">Aucun module.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<form class="studio-course-toolbar" id="admin-course-filters" onsubmit="return false;">
+  <input
+    type="search"
+    id="mod-live-q"
+    class="form-control"
+    placeholder="Search courses, teachers…"
+    autocomplete="off"
+    aria-label="Search courses"
+  >
+</form>
+
+<div class="studio-course-grid" id="mod-grid">
+  {% for c in courses %}
+  {% with ready=c.readiness_score %}
+  <article
+    class="studio-course-card reveal"
+    data-status="{{ c.status }}"
+    data-search="{{ c.code }} {{ c.title }} {{ c.get_level_display }} {{ c.category.name|default:'' }} {{ c.instructor.get_full_name|default:c.instructor.username }}"
+  >
+    <div
+      class="studio-course-cover"
+      {% if c.cover %}style="background-image:linear-gradient(135deg, rgba(132,94,247,0.55), rgba(109,40,217,0.35)), url('{{ c.cover.url }}');"{% endif %}
+      aria-hidden="true"
+    ></div>
+    <div class="studio-course-body">
+      <div class="studio-course-meta">
+        <span class="studio-course-code">{{ c.code }}</span>
+        <span class="studio-state" data-state="{{ c.studio_state }}">
+          {{ c.studio_state_label }}
+        </span>
+        <span class="chip">{{ c.get_level_display }}</span>
+      </div>
+      <h3 class="studio-course-title">
+        <a href="{% url 'courses:admin_course_edit' c.pk %}">{{ c.title }}</a>
+      </h3>
+      <p class="admin-course-instructor">
+        {{ c.instructor.get_full_name|default:c.instructor.username }}
+        {% if c.category %} · {{ c.category.name }}{% endif %}
+      </p>
+      <div class="studio-course-facts">
+        <div class="studio-course-fact"><strong>{{ c.student_count }}</strong><span>Students</span></div>
+        <div class="studio-course-fact"><strong>{{ c.res_count }}</strong><span>Resources</span></div>
+        <div class="studio-course-fact"><strong>{{ c.quiz_count }}</strong><span>Quizzes</span></div>
+      </div>
+      {% if ready != None %}
+      <div class="studio-course-progress" aria-hidden="true">
+        <span class="studio-course-progress-bar"><i style="width:{{ ready }}%;"></i></span>
+        <span>{{ ready }}% ready</span>
+      </div>
+      {% endif %}
+      <div class="studio-course-actions">
+        <a href="{% url 'courses:admin_course_edit' c.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+        {% for val, label in c.Status.choices %}
+        {% if c.status != val %}
+        <form method="post" action="{% url 'courses:admin_course_status' c.pk %}" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ val }}">
+          <button class="btn btn-sm btn-ghost" type="submit">{{ label }}</button>
+        </form>
+        {% endif %}
+        {% endfor %}
+        <form method="post" action="{% url 'courses:admin_course_delete' c.pk %}" style="display:inline;" data-confirm="Delete {{ c.code }} permanently?">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endwith %}
+  {% endfor %}
 </div>
+<p id="mod-empty-filter" hidden class="studio-empty-inline" style="text-align:center;padding:1.5rem;">No courses match your search.</p>
+{% else %}
+<div class="empty-state reveal">
+  <div class="icon">📚</div>
+  <p><strong>No courses yet.</strong></p>
+  <p>Create the first course for an instructor.</p>
+  <a href="{% url 'courses:admin_course_create' %}" class="btn btn-primary" style="margin-top:1rem;">+ New course</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cards = [...document.querySelectorAll("#mod-grid .studio-course-card")];
+  const qInput = document.getElementById("mod-live-q");
+  const empty = document.getElementById("mod-empty-filter");
+  if (!qInput) return;
+  const filter = () => {
+    const q = (qInput.value || "").toLowerCase().trim();
+    let shown = 0;
+    cards.forEach((card) => {
+      const hay = (card.getAttribute("data-search") || "").toLowerCase();
+      const ok = !q || hay.includes(q);
+      card.hidden = !ok;
+      if (ok) shown += 1;
+    });
+    if (empty) empty.hidden = shown > 0 || !cards.length;
+  };
+  qInput.addEventListener("input", filter);
+});
+</script>
 {% endblock %}

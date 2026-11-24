@@ -1,137 +1,252 @@
 ﻿{% extends "layouts/teacher.html" %}
-{% block title %}{{ course.title }} — UniSphere{% endblock %}
+{% block title %}{{ course.title }} — Academic Studio{% endblock %}
 {% block page_title %}{{ course.code }}{% endblock %}
-{% block page_sub %}{{ course.get_level_display }} · {{ course.get_status_display }}{% endblock %}
-{% block top_actions %}
-<a href="{% url 'courses:back_course_edit' course.pk %}" class="btn btn-secondary btn-sm">Modifier</a>
-<a href="{% url 'courses:back_course_list' %}" class="btn btn-ghost btn-sm">Mes modules</a>
+{% block page_sub %}{{ course.get_level_display }} · {{ course.studio_state_label }}{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_course_builder' course.pk %}" class="btn btn-primary btn-sm">Course Builder</a>
+<a href="{% url 'courses:back_course_analytics' course.pk %}" class="btn btn-secondary btn-sm">Analytics</a>
+<a href="{% url 'courses:back_course_edit' course.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+<a href="{% url 'courses:back_course_preview' course.pk %}" class="btn btn-ghost btn-sm">Preview as student</a>
+<a href="{% url 'courses:back_course_list' %}" class="btn btn-ghost btn-sm">Courses</a>
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <section class="mod-hero reveal" data-tilt>
   <div class="mod-hero-cover" {% if course.cover %}style="background-image:url('{{ course.cover.url }}')"{% endif %}></div>
   <div class="mod-hero-body">
     <div class="mod-hero-tags">
       <span class="chip">{{ course.code }}</span>
-      <span class="badge {{ course.status_badge_class }}">{{ course.get_status_display }}</span>
+      <span class="studio-state" data-state="{{ course.studio_state }}" data-studio-state>
+        <span data-studio-label>{{ course.studio_state_label }}</span>
+      </span>
       <span class="chip">{{ course.get_level_display }}</span>
       {% if course.category %}<span class="chip" style="border-color:{{ course.category.color }};">{{ course.category.name }}</span>{% endif %}
     </div>
-    <h1>{{ course.title }}</h1>
-    <p>{{ course.short_description|default:"Fiche complète du module — ressources, quiz et publication." }}</p>
+    <h1>📘 {{ course.title }}</h1>
+    <p>{{ course.short_description|default:"Organize resources, control visibility, then publish to students." }}</p>
     <div class="mod-hero-actions">
-      <a href="{% url 'courses:back_course_edit' course.pk %}" class="btn btn-primary">Éditer le module</a>
-      <a href="{% url 'courses:back_resource_create' course.pk %}" class="btn btn-amber">+ Ressource</a>
+      <a href="{% url 'courses:back_course_builder' course.pk %}" class="btn btn-primary">📖 Course Builder</a>
+      <a href="{% url 'courses:back_course_analytics' course.pk %}" class="btn btn-secondary">📊 Analytics</a>
+      <a href="{% url 'courses:back_course_edit' course.pk %}" class="btn btn-secondary">Edit course</a>
+      <button type="button" class="btn btn-amber" data-open-res-modal>+ Resource</button>
       <a href="{% url 'courses:back_quiz_create' course.pk %}" class="btn btn-secondary">+ Quiz</a>
-      {% if course.is_published %}
-      <a href="{{ course.get_absolute_url }}" class="btn btn-ghost" target="_blank" rel="noopener">Voir côté étudiant</a>
-      {% endif %}
-      <form method="post" action="{% url 'courses:back_course_delete' course.pk %}" data-confirm="Supprimer définitivement « {{ course.code }} » ? Toutes les ressources, quiz et inscriptions liés seront perdus.">
+      <a href="{% url 'courses:back_course_preview' course.pk %}" class="btn btn-ghost">👁 Preview as student</a>
+      <form method="post" action="{% url 'courses:back_course_delete' course.pk %}" data-confirm="Delete « {{ course.code }} » permanently? Linked resources, quizzes and enrollments will be removed.">
         {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Supprimer</button>
+        <button type="submit" class="btn btn-danger">Delete</button>
       </form>
     </div>
   </div>
 </section>
 
 <div class="mod-kpi reveal" style="margin-top:1.25rem;">
-  <div class="mod-kpi-card"><span class="mod-kpi-label">Étudiants</span><span class="mod-kpi-value" data-count="{{ course.student_count }}">0</span></div>
-  <div class="mod-kpi-card"><span class="mod-kpi-label">Ressources</span><span class="mod-kpi-value" data-count="{{ course.res_count }}">0</span></div>
-  <div class="mod-kpi-card"><span class="mod-kpi-label">Quiz</span><span class="mod-kpi-value" data-count="{{ course.quiz_count }}">0</span></div>
-  <div class="mod-kpi-card"><span class="mod-kpi-label">Volume</span><span class="mod-kpi-value" data-count="{{ course.duration_hours }}">0</span><small class="mod-kpi-unit">heures</small></div>
+  <div class="mod-kpi-card"><span class="mod-kpi-label">Students</span><span class="mod-kpi-value" data-count="{{ course.student_count }}">0</span></div>
+  <div class="mod-kpi-card"><span class="mod-kpi-label">Resources</span><span class="mod-kpi-value" data-count="{{ course.res_count }}">0</span></div>
+  <div class="mod-kpi-card"><span class="mod-kpi-label">Quizzes</span><span class="mod-kpi-value" data-count="{{ course.quiz_count }}">0</span></div>
+  <div class="mod-kpi-card"><span class="mod-kpi-label">Hours</span><span class="mod-kpi-value" data-count="{{ course.duration_hours }}">0</span><small class="mod-kpi-unit">h</small></div>
 </div>
 
 <div class="detail-layout" style="margin:1.5rem 0 2rem;">
-  <div class="form-card reveal" style="max-width:none;">
+  <div class="form-card reveal studio-publish-card" style="max-width:none;">
     <h2 class="mod-section-title">Description</h2>
     <p style="white-space:pre-line;margin:0;">{{ course.description }}</p>
 
     {% if course.prerequisites %}
-    <h2 class="mod-section-title">Prérequis</h2>
+    <h2 class="mod-section-title">Prerequisites</h2>
     <div class="mod-prereq">{{ course.prerequisites }}</div>
     {% endif %}
 
-    <h2 class="mod-section-title">Changer le statut</h2>
-    <p class="help" style="margin-top:-0.35rem;">Publier affecte automatiquement les étudiants du parcours cible.</p>
-    <div class="status-actions">
+    <h2 class="mod-section-title">Publication status</h2>
+    <p class="help" style="margin-top:-0.35rem;">Publishing a visible course enrolls every student on the target programme (e.g. all 1A).</p>
+    <div class="studio-status-row status-actions">
       {% for value, label in status_choices %}
       <form method="post" action="{% url 'courses:back_course_status' course.pk %}">
         {% csrf_token %}
         <input type="hidden" name="status" value="{{ value }}">
         <button type="submit" class="btn btn-sm {% if course.status == value %}btn-primary{% else %}btn-secondary{% endif %}" {% if course.status == value %}disabled{% endif %}>
+          {% if value == "draft" %}🟡{% elif value == "published" %}🟢{% else %}🔴{% endif %}
           {{ label }}
         </button>
       </form>
       {% endfor %}
     </div>
+
+    <h2 class="mod-section-title">Visibility</h2>
+    <p class="help" style="margin-top:-0.35rem;">Students only see content that is <strong>published</strong> and <strong>visible</strong>.</p>
+    <div class="studio-vis-panel" id="course-vis-panel">
+      <label class="studio-vis-option {% if course.is_student_accessible %}is-active{% endif %}">
+        <input
+          type="radio"
+          name="course_visibility"
+          value="1"
+          {% if course.is_visible %}checked{% endif %}
+          data-set-visibility="{% url 'courses:back_course_toggle_visibility' course.pk %}"
+          data-visible="1"
+        >
+        <span>
+          <strong>● Visible to students</strong>
+          <span>Shown in the Digital Student Desk when status is Published</span>
+        </span>
+      </label>
+      <label class="studio-vis-option {% if not course.is_visible %}is-active{% endif %}">
+        <input
+          type="radio"
+          name="course_visibility"
+          value="0"
+          {% if not course.is_visible %}checked{% endif %}
+          data-set-visibility="{% url 'courses:back_course_toggle_visibility' course.pk %}"
+          data-visible="0"
+        >
+        <span>
+          <strong>○ Hidden from students</strong>
+          <span>Kept in Academic Studio only — URL access is blocked for students</span>
+        </span>
+      </label>
+    </div>
   </div>
 
-  <div class="info-card reveal">
-    <h3>Fiche module</h3>
-    <div class="info-row"><span>Niveau destiné</span><strong>{{ course.get_level_display }}</strong></div>
-    <div class="info-row"><span>Volume</span><strong>{{ course.duration_hours }} h</strong></div>
-    <div class="info-row"><span>Département</span><strong>{{ course.category.name|default:"—" }}</strong></div>
-    <div class="info-row"><span>Inscrits</span><strong>{{ course.student_count }}</strong></div>
-    <div class="info-row"><span>Créé le</span><strong>{{ course.created_at|date:"d/m/Y" }}</strong></div>
-    <div class="info-row"><span>Mis à jour</span><strong>{{ course.updated_at|date:"d/m/Y H:i" }}</strong></div>
-    <div class="info-row"><span>Publié le</span><strong>{% if course.published_at %}{{ course.published_at|date:"d/m/Y" }}{% else %}—{% endif %}</strong></div>
+  <div class="info-card reveal studio-side-card">
+    <h3>Course sheet</h3>
+    <div class="info-row"><span>Teacher</span><strong>{{ course.instructor.get_full_name|default:course.instructor.username }}</strong></div>
+    <div class="info-row"><span>Programme</span><strong>{{ course.get_level_display }}</strong></div>
+    <div class="info-row"><span>Hours</span><strong>{{ course.duration_hours }} h</strong></div>
+    <div class="info-row"><span>Department</span><strong>{{ course.category.name|default:"—" }}</strong></div>
+    <div class="info-row"><span>Students</span><strong>{{ course.student_count }}</strong></div>
+    <div class="info-row"><span>Created</span><strong>{{ course.created_at|date:"d/m/Y" }}</strong></div>
+    <div class="info-row"><span>Updated</span><strong>{{ course.updated_at|date:"d/m/Y H:i" }}</strong></div>
+    <div class="info-row"><span>Studio state</span><strong data-studio-label>{{ course.studio_state_label }}</strong></div>
+    <div class="info-row"><span>Published</span><strong>{% if course.published_at %}{{ course.published_at|date:"d/m/Y" }}{% else %}—{% endif %}</strong></div>
   </div>
 </div>
 
 <div class="page-header" style="margin-top:0.5rem;">
   <div>
-    <h1 style="font-size:1.4rem;">Ressources pédagogiques</h1>
-    <p>{{ course.res_count }} élément{{ course.res_count|pluralize }} · CRUD complet</p>
+    <h1 style="font-size:1.4rem;">Resources</h1>
+    <p>{{ course.res_count }} item{{ course.res_count|pluralize }} · individual visibility</p>
   </div>
-  <a href="{% url 'courses:back_resource_create' course.pk %}" class="btn btn-amber">+ Ressource</a>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+    <button type="button" class="btn btn-amber" data-open-res-modal>+ Resource</button>
+    <a href="{% url 'courses:back_resource_create' course.pk %}" class="btn btn-ghost btn-sm">Full form</a>
+  </div>
 </div>
 
-{% if course.resources.all %}
 <div class="table-wrap reveal" style="margin-bottom:2rem;">
   <table class="data-table">
     <thead>
       <tr>
-        <th>Ordre</th>
-        <th>Titre</th>
+        <th>Order</th>
+        <th>Title</th>
         <th>Type</th>
-        <th>Niveau destiné</th>
-        <th>Obligatoire</th>
+        <th>Level</th>
+        <th>Visibility</th>
+        <th>Required</th>
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="res-table-body">
       {% for r in course.resources.all %}
-      <tr>
+      <tr data-res-id="{{ r.pk }}">
         <td>{{ r.order }}</td>
         <td>{{ r.type_icon }} {{ r.title }}</td>
         <td>{{ r.get_resource_type_display }}</td>
         <td><span class="chip">{{ r.get_target_level_display }}</span></td>
-        <td>{% if r.is_required %}Oui{% else %}Non{% endif %}</td>
+        <td>
+          <button type="button" class="vis-toggle" data-toggle-visibility="{% url 'courses:back_resource_toggle_visibility' r.pk %}">
+            <span class="vis-pill {% if r.is_visible %}on{% else %}off{% endif %}">
+              <span class="vis-text">{{ r.visibility_label }}</span>
+            </span>
+          </button>
+        </td>
+        <td>{% if r.is_required %}Yes{% else %}No{% endif %}</td>
         <td class="actions">
-          <a href="{% url 'courses:back_resource_edit' r.pk %}" class="btn btn-sm btn-secondary">Modifier</a>
-          <form method="post" action="{% url 'courses:back_resource_delete' r.pk %}" data-confirm="Supprimer cette ressource ?">
+          <a href="{% url 'courses:back_resource_edit' r.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+          <form method="post" action="{% url 'courses:back_resource_delete' r.pk %}" data-confirm="Delete this resource?">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
           </form>
         </td>
       </tr>
+      {% empty %}
       {% endfor %}
     </tbody>
   </table>
+  <div class="empty-state" id="res-empty" style="margin:1rem 0;" {% if course.resources.all %}hidden{% endif %}>
+    <div class="icon">📎</div>
+    <p><strong>No resources yet.</strong></p>
+    <p>Add PDFs, videos, links or documents for students.</p>
+  </div>
 </div>
-{% else %}
-<div class="empty-state" style="margin-bottom:2rem;">
-  <div class="icon">📎</div>
-  <p>Aucune ressource. Ajoutez des PDF, vidéos, liens ou documents.</p>
+
+{# Modal ajout ressource #}
+<div class="res-modal-backdrop" id="res-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="res-modal-title">
+  <div class="res-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+      <h3 id="res-modal-title">Add resource</h3>
+      <button type="button" class="btn btn-ghost btn-sm" id="res-modal-close">Close</button>
+    </div>
+    <form id="res-modal-form" action="{% url 'courses:back_resource_create' course.pk %}" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_modal_title">Title</label>
+        <input class="form-control" type="text" name="title" id="id_modal_title" required placeholder="Resource title">
+      </div>
+      <div class="form-group">
+        <label for="id_modal_type">Type</label>
+        <select class="form-control" name="resource_type" id="id_modal_type">
+          {% for value, label in resource_type_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% empty %}
+          <option value="document">Document</option>
+          <option value="pdf">PDF</option>
+          <option value="video">Video</option>
+          <option value="link">Link</option>
+          <option value="presentation">Presentation</option>
+          <option value="exercise">Exercise</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="id_modal_desc">Description</label>
+        <textarea class="form-control" name="description" id="id_modal_desc" rows="3"></textarea>
+      </div>
+      <div class="dropzone" id="res-dropzone">
+        <strong>Drop a file here</strong>
+        <div style="font-size:0.85rem;margin-top:0.35rem;">or click to browse</div>
+        <input type="file" name="file" style="display:none;">
+      </div>
+      <div class="upload-bar" id="res-upload-bar"><i></i></div>
+      <div class="form-group">
+        <label for="id_modal_url">URL (optional)</label>
+        <input class="form-control" type="url" name="url" id="id_modal_url" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label for="id_modal_level">Target level</label>
+        <input class="form-control" type="text" name="target_level" id="id_modal_level" value="{{ course.level }}">
+      </div>
+      <div class="form-group">
+        <label for="id_modal_order">Order</label>
+        <input class="form-control" type="number" name="order" id="id_modal_order" value="0" min="0">
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" name="is_required" id="id_modal_req" value="on">
+        <label for="id_modal_req" style="margin:0;">Required</label>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" name="is_visible" id="id_modal_vis" value="on" checked>
+        <label for="id_modal_vis" style="margin:0;">Visible to students</label>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Save resource</button>
+    </form>
+  </div>
 </div>
-{% endif %}
 
 <div class="page-header">
   <div>
-    <h1 style="font-size:1.4rem;">Quiz &amp; évaluations</h1>
-    <p>{{ course.quiz_count }} quiz · CRUD complet</p>
+    <h1 style="font-size:1.4rem;">Quizzes</h1>
+    <p>{{ course.quiz_count }} quiz{{ course.quiz_count|pluralize:"zes" }}</p>
   </div>
-  <a href="{% url 'courses:back_quiz_create' course.pk %}" class="btn btn-primary">+ Créer un quiz</a>
+  <a href="{% url 'courses:back_quiz_create' course.pk %}" class="btn btn-primary">+ Create quiz</a>
 </div>
 
 {% if course.quizzes.all %}
@@ -139,11 +254,11 @@
   <table class="data-table">
     <thead>
       <tr>
-        <th>Titre</th>
+        <th>Title</th>
         <th>Questions</th>
-        <th>Seuil</th>
-        <th>Publié</th>
-        <th>Échéance</th>
+        <th>Pass mark</th>
+        <th>Published</th>
+        <th>Due</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -153,14 +268,14 @@
         <td><a href="{% url 'courses:back_quiz_detail' q.pk %}">{{ q.title }}</a></td>
         <td>{{ q.question_count }}</td>
         <td>{{ q.passing_score }}%</td>
-        <td>{% if q.is_published %}Oui{% else %}Non{% endif %}</td>
+        <td>{% if q.is_published %}Yes{% else %}No{% endif %}</td>
         <td>{% if q.due_date %}{{ q.due_date|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
         <td class="actions">
-          <a href="{% url 'courses:back_quiz_detail' q.pk %}" class="btn btn-sm btn-ghost">Détail</a>
-          <a href="{% url 'courses:back_quiz_edit' q.pk %}" class="btn btn-sm btn-secondary">Modifier</a>
-          <form method="post" action="{% url 'courses:back_quiz_delete' q.pk %}" style="display:inline;" data-confirm="Supprimer « {{ q.title }} » ?">
+          <a href="{% url 'courses:back_quiz_detail' q.pk %}" class="btn btn-sm btn-ghost">Open</a>
+          <a href="{% url 'courses:back_quiz_edit' q.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+          <form method="post" action="{% url 'courses:back_quiz_delete' q.pk %}" style="display:inline;" data-confirm="Delete « {{ q.title }} » ?">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
           </form>
         </td>
       </tr>
@@ -171,7 +286,8 @@
 {% else %}
 <div class="empty-state">
   <div class="icon">📝</div>
-  <p>Aucun quiz pour ce module.</p>
+  <p><strong>No quizzes for this course yet.</strong></p>
+  <p>Create a quiz to assess what students have learned.</p>
 </div>
 {% endif %}
 {% endblock %}

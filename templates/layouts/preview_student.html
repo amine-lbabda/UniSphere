@@ -1,0 +1,89 @@
+{% extends "layouts/app_shell.html" %}
+{% load static %}
+{% block body_class %}space-student preview-mode{% endblock %}
+{% block space_label %}Student Preview{% endblock %}
+{% block brand_url %}{{ preview_back_url|default:"#" }}{% endblock %}
+
+{% block pre_shell %}
+<div class="living-bg" aria-hidden="true">
+  <span class="b1"></span><span class="b2"></span><span class="b3"></span>
+</div>
+<button type="button" class="desk-nav-backdrop" id="desk-nav-backdrop" aria-label="Close menu"></button>
+<div class="preview-sticky" role="status">
+  <div class="preview-sticky-inner">
+    <div>
+      <strong>👁 Preview as Student</strong>
+      <span>{{ preview_hint|default:"This is exactly what students see on the Digital Student Desk." }}</span>
+    </div>
+    <div class="preview-sticky-actions">
+      {% if preview_edit_url %}
+      <a href="{{ preview_edit_url }}" class="btn btn-secondary btn-sm">Edit</a>
+      {% endif %}
+      <a href="{{ preview_back_url }}" class="btn btn-primary btn-sm">← Back to Academic Studio</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/academic-desk.css' %}">
+<link rel="stylesheet" href="{% static 'css/book.css' %}">
+<link rel="stylesheet" href="{% static 'css/courses.css' %}">
+<link rel="stylesheet" href="{% static 'css/resources.css' %}">
+<link rel="stylesheet" href="{% static 'css/animations.css' %}">
+<link rel="stylesheet" href="{% static 'css/themes.css' %}">
+<link rel="stylesheet" href="{% static 'css/preview-student.css' %}">
+{% block preview_css %}{% endblock %}
+{% endblock %}
+
+{% block nav_toggle %}
+<button type="button" class="desk-nav-toggle" id="desk-nav-toggle" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open menu">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>
+{% endblock %}
+
+{% block sidebar %}
+<p class="nav-section-label" style="color:rgba(255,255,255,0.4);font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.5rem 0.85rem;">Preview</p>
+<a href="{{ preview_back_url }}">
+  <span class="nav-ico" aria-hidden="true">←</span> Academic Studio
+</a>
+{% if preview_course_url %}
+<a href="{{ preview_course_url }}" class="active">
+  <span class="nav-ico" aria-hidden="true">📘</span> Course preview
+</a>
+{% endif %}
+{% if preview_builder_url %}
+<a href="{{ preview_builder_url }}">
+  <span class="nav-ico" aria-hidden="true">📖</span> Course Builder
+</a>
+{% endif %}
+{% if preview_edit_url %}
+<a href="{{ preview_edit_url }}">
+  <span class="nav-ico" aria-hidden="true">✏</span> Edit
+</a>
+{% endif %}
+<div class="side-divider" aria-hidden="true"></div>
+<a href="{% url 'courses:back_dashboard' %}">
+  <span class="nav-ico" aria-hidden="true">📊</span> Studio dashboard
+</a>
+<a href="{% url 'courses:back_course_list' %}">
+  <span class="nav-ico" aria-hidden="true">📚</span> Courses
+</a>
+{% endblock %}
+
+{% block top_actions %}
+<button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+  <span aria-hidden="true">🌙</span> Study Mode
+</button>
+<a href="{{ preview_back_url }}" class="btn btn-primary btn-sm">← Back to Academic Studio</a>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/desk.js' %}"></script>
+<script src="{% static 'js/academic-desk.js' %}"></script>
+{% block preview_js %}{% endblock %}
+{% endblock %}

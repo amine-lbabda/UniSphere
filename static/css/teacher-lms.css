@@ -1,0 +1,158 @@
+/* Teacher LMS enhancements — scoped, non-breaking */
+.space-teacher .vis-pill, .space-admin .vis-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.space-teacher .vis-pill.on, .space-admin .vis-pill.on {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+.space-teacher .vis-pill.off, .space-admin .vis-pill.off {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border-color: rgba(100, 116, 139, 0.2);
+}
+
+.space-teacher .vis-toggle, .space-admin .vis-toggle {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  background: transparent;
+  padding: 0;
+}
+.space-teacher .vis-toggle.is-busy, .space-admin .vis-toggle.is-busy { opacity: 0.55; pointer-events: none; }
+.space-teacher .vis-toggle.flash, .space-admin .vis-toggle.flash {
+  animation: visFlash 0.45s ease;
+}
+@keyframes visFlash {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.space-teacher .toast-stack, .space-admin .toast-stack {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 120;
+  display: grid;
+  gap: 0.55rem;
+  max-width: min(360px, calc(100vw - 2rem));
+}
+.space-teacher .toast, .space-admin .toast {
+  background: #0f172a;
+  color: #fff;
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+  font-size: 0.9rem;
+  animation: toastIn 0.28s ease;
+}
+.space-teacher .toast.ok, .space-admin .toast.ok { background: linear-gradient(135deg, #065f46, #0f766e); }
+.space-teacher .toast.warn, .space-admin .toast.warn { background: linear-gradient(135deg, #92400e, #b45309); }
+.space-teacher .toast.err, .space-admin .toast.err { background: linear-gradient(135deg, #9f1239, #be123c); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.space-teacher .preview-banner, .space-admin .preview-banner {
+  background: linear-gradient(135deg, #4338ca, #06b6d4);
+  color: #fff;
+  border-radius: 14px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 1rem;
+  font-weight: 650;
+}
+
+.space-teacher .res-modal-backdrop, .space-admin .res-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.space-teacher .res-modal-backdrop.is-open, .space-admin .res-modal-backdrop.is-open { display: flex; }
+.space-teacher .res-modal, .space-admin .res-modal {
+  width: min(560px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 20px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.28);
+  animation: toastIn 0.28s ease;
+}
+.space-teacher .res-modal h3, .space-admin .res-modal h3 {
+  margin: 0 0 0.85rem;
+  font-size: 1.2rem;
+}
+.space-teacher .dropzone, .space-admin .dropzone {
+  border: 1.5px dashed rgba(11, 31, 42, 0.2);
+  border-radius: 14px;
+  padding: 1.1rem;
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+  margin-bottom: 0.85rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.space-teacher .dropzone.is-drag, .space-admin .dropzone.is-drag {
+  border-color: #3b5bdb;
+  background: #eef2ff;
+}
+.space-teacher .upload-bar, .space-admin .upload-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin: 0.5rem 0 0.85rem;
+  display: none;
+}
+.space-teacher .upload-bar.is-on, .space-admin .upload-bar.is-on { display: block; }
+.space-teacher .upload-bar i, .space-admin .upload-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #3b5bdb, #22b8cf);
+  transition: width 0.2s;
+}
+
+.space-teacher .activity-feed, .space-admin .activity-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.space-teacher .activity-feed li, .space-admin .activity-feed li {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.space-teacher .activity-feed a, .space-admin .activity-feed a {
+  color: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+.space-teacher .activity-feed small, .space-admin .activity-feed small {
+  display: block;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.space-teacher .res-row-enter, .space-admin .res-row-enter {
+  animation: toastIn 0.35s ease;
+}

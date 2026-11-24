@@ -66,10 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Quiz timer + answered progress
+  // Quiz timer + answered progress (skip auto-submit in teacher preview)
   const timerEl = document.getElementById("quiz-timer");
   const form = document.getElementById("quiz-form");
-  if (timerEl && form) {
+  if (timerEl && form && timerEl.dataset.preview !== "1") {
     let remaining = (Number(timerEl.dataset.minutes) || 15) * 60;
     const display = document.getElementById("timer-display");
     const answeredBar = document.getElementById("quiz-answered-bar");

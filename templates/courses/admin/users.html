@@ -1,37 +1,37 @@
 {% extends "layouts/admin.html" %}
-{% block title %}Gestion des utilisateurs — Console{% endblock %}
-{% block page_title %}Gestion des utilisateurs{% endblock %}
-{% block page_sub %}CRUD · Étudiant · Enseignant · Administrateur{% endblock %}
-{% block top_actions %}
-<a href="{% url 'courses:admin_user_create' %}" class="btn btn-primary btn-sm btn-glow">+ Ajouter un utilisateur</a>
+{% block title %}Users — Control Center{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block page_sub %}Students · teachers · administrators{% endblock %}
+{% block admin_actions %}
+<a href="{% url 'courses:admin_user_create' %}" class="btn btn-primary btn-sm btn-glow">+ Add user</a>
 {% endblock %}
 
 {% block content %}
-<form method="get" class="user-toolbar">
-  <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher (nom, email, téléphone…)" style="max-width:280px;">
-  <select name="role" class="form-control" style="width:auto;min-width:180px;">
-    <option value="">Tous les types</option>
+<form method="get" class="user-toolbar reveal">
+  <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name, email, phone…" style="max-width:280px;" aria-label="Search users">
+  <select name="role" class="form-control" style="width:auto;min-width:180px;" aria-label="Filter by role">
+    <option value="">All roles</option>
     {% for val, label in roles %}
     <option value="{{ val }}" {% if role == val %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  <button type="submit" class="btn btn-secondary btn-sm">Filtrer</button>
+  <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
   {% if q or role %}<a href="{% url 'courses:admin_users' %}" class="btn btn-ghost btn-sm">Reset</a>{% endif %}
 </form>
 
-<div class="table-wrap">
+{% if users %}
+<div class="table-wrap reveal">
   <table class="data-table">
     <thead>
       <tr>
         <th>ID</th>
         <th>Photo</th>
-        <th>Nom</th>
-        <th>Prénom</th>
+        <th>Name</th>
         <th>Email</th>
-        <th>Téléphone</th>
-        <th>Type</th>
-        <th>Statut</th>
-        <th>Créé le</th>
+        <th>Phone</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Joined</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -46,51 +46,59 @@
           <span class="user-table-avatar fallback">{{ u.first_name|default:u.username|slice:":1"|upper }}</span>
           {% endif %}
         </td>
-        <td>{{ u.last_name|default:"—" }}</td>
-        <td>{{ u.first_name|default:"—" }}</td>
+        <td>
+          <strong>{{ u.get_full_name|default:u.username }}</strong>
+          {% if u.get_full_name %}<br><small style="color:var(--studio-muted);">{{ u.username }}</small>{% endif %}
+        </td>
         <td>{{ u.email|default:"—" }}</td>
         <td>{% if u.profile and u.profile.phone %}{{ u.profile.phone }}{% else %}—{% endif %}</td>
         <td>{% if u.profile %}<span class="chip">{{ u.profile.get_role_display }}</span>{% else %}—{% endif %}</td>
         <td>
           {% if u.is_active %}
-          <span class="badge badge-published">Actif</span>
+          <span class="badge badge-published">Active</span>
           {% else %}
-          <span class="badge badge-archived">Désactivé</span>
+          <span class="badge badge-archived">Inactive</span>
           {% endif %}
         </td>
         <td>{{ u.date_joined|date:"d/m/Y" }}</td>
         <td>
           <div class="ml-actions">
-            <a href="{% url 'courses:admin_user_detail' u.pk %}" class="btn btn-sm btn-ghost">Consulter</a>
-            <a href="{% url 'courses:admin_user_edit' u.pk %}" class="btn btn-sm btn-secondary">Modifier</a>
+            <a href="{% url 'courses:admin_user_detail' u.pk %}" class="btn btn-sm btn-ghost">View</a>
+            <a href="{% url 'courses:admin_user_edit' u.pk %}" class="btn btn-sm btn-secondary">Edit</a>
             {% if u.pk != request.user.pk %}
-            <form method="post" action="{% url 'courses:admin_user_toggle_active' u.pk %}" data-confirm="{% if u.is_active %}Désactiver{% else %}Activer{% endif %} le compte « {{ u.get_full_name|default:u.username }} » ?">
+            <form method="post" action="{% url 'courses:admin_user_toggle_active' u.pk %}" data-confirm="{% if u.is_active %}Deactivate{% else %}Activate{% endif %} « {{ u.get_full_name|default:u.username }} » ?">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm {% if u.is_active %}btn-ghost{% else %}btn-primary{% endif %}">{% if u.is_active %}Désactiver{% else %}Activer{% endif %}</button>
+              <button type="submit" class="btn btn-sm {% if u.is_active %}btn-ghost{% else %}btn-primary{% endif %}">{% if u.is_active %}Deactivate{% else %}Activate{% endif %}</button>
             </form>
-            <form method="post" action="{% url 'courses:admin_user_delete' u.pk %}" data-confirm="Supprimer définitivement « {{ u.get_full_name|default:u.username }} » ?">
+            <form method="post" action="{% url 'courses:admin_user_delete' u.pk %}" data-confirm="Permanently delete « {{ u.get_full_name|default:u.username }} » ?">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+              <button type="submit" class="btn btn-sm btn-danger">Delete</button>
             </form>
             {% endif %}
           </div>
         </td>
       </tr>
-      {% empty %}
-      <tr><td colspan="10">Aucun utilisateur trouvé.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+{% else %}
+<div class="empty-state reveal">
+  <div class="icon">👥</div>
+  <p><strong>No users found.</strong></p>
+  <p>Try another search or add a new account.</p>
+  <a href="{% url 'courses:admin_user_create' %}" class="btn btn-primary" style="margin-top:1rem;">+ Add user</a>
+</div>
+{% endif %}
 
 {% if page.paginator.num_pages > 1 %}
 <nav class="user-pagination">
   {% if page.has_previous %}
-  <a class="btn btn-sm btn-secondary" href="?page={{ page.previous_page_number }}&q={{ q }}&role={{ role }}">← Précédent</a>
+  <a class="btn btn-sm btn-secondary" href="?page={{ page.previous_page_number }}&q={{ q }}&role={{ role }}">← Previous</a>
   {% endif %}
   <span>Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
   {% if page.has_next %}
-  <a class="btn btn-sm btn-secondary" href="?page={{ page.next_page_number }}&q={{ q }}&role={{ role }}">Suivant →</a>
+  <a class="btn btn-sm btn-secondary" href="?page={{ page.next_page_number }}&q={{ q }}&role={{ role }}">Next →</a>
   {% endif %}
 </nav>
 {% endif %}

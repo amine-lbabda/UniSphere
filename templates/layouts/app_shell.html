@@ -11,8 +11,9 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body class="app-body {% block body_class %}{% endblock %}">
-  <div class="app-shell">
-    <aside class="app-sidebar">
+  {% block pre_shell %}{% endblock %}
+  <div class="app-shell" id="app-shell">
+    <aside class="app-sidebar" id="app-sidebar">
       <a href="{% block brand_url %}{% url 'courses:front_home' %}{% endblock %}" class="app-brand">
         <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere">
         <div>
@@ -20,7 +21,7 @@
           <small>{% block space_label %}Espace{% endblock %}</small>
         </div>
       </a>
-      <nav class="app-side-nav">
+      <nav class="app-side-nav" aria-label="Navigation principale">
         {% block sidebar %}{% endblock %}
       </nav>
       <div class="app-side-foot">
@@ -36,14 +37,17 @@
 
     <div class="app-main">
       <header class="app-topbar">
-        <div>
-          <h1 class="app-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
-          <p class="app-page-sub">{% block page_sub %}{% endblock %}</p>
+        <div class="app-topbar-left">
+          {% block nav_toggle %}{% endblock %}
+          <div>
+            <h1 class="app-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+            <p class="app-page-sub">{% block page_sub %}{% endblock %}</p>
+          </div>
         </div>
         <div class="app-top-actions">
           {% block top_actions %}{% endblock %}
-          <a href="{% url 'courses:front_notifications' %}" class="app-icon-btn" title="Notifications">
-            🔔{% if unread_notifications %}<span class="nav-badge">{{ unread_notifications }}</span>{% endif %}
+          <a href="{% url 'courses:front_notifications' %}" class="app-icon-btn" title="Notifications" aria-label="Notifications">
+            <span aria-hidden="true">🔔</span>{% if unread_notifications %}<span class="nav-badge">{{ unread_notifications }}</span>{% endif %}
           </a>
           <form action="{% url 'logout' %}" method="post">{% csrf_token %}
             <button type="submit" class="btn btn-secondary btn-sm">Déconnexion</button>

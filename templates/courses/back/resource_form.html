@@ -1,65 +1,204 @@
 ﻿{% extends "layouts/teacher.html" %}
-{% block title %}{{ title }} — UniSphere{% endblock %}
+{% load static %}
+{% block title %}{{ title }} — Academic Studio{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_sub %}Module {{ course.code }} · parcours module : {{ course.get_level_display }}{% endblock %}
+{% block page_sub %}
+  {% if course %}{{ course.code }} · {{ course.get_level_display }}{% else %}Resource Library upload{% endif %}
+{% endblock %}
+{% block studio_actions %}
+<a href="{% if standalone %}{% url 'courses:back_resource_library' %}{% else %}{% url 'courses:back_course_detail' course.pk %}{% endif %}" class="btn btn-secondary btn-sm">Cancel</a>
+{% endblock %}
+
+{% block teacher_css %}
+<link rel="stylesheet" href="{% static 'css/studio-resources.css' %}">
+{% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="form-card reveal">
+<form method="post" enctype="multipart/form-data" class="res-upload-shell reveal" id="res-upload-form" novalidate>
   {% csrf_token %}
+  {% if standalone %}
+  <input type="hidden" name="next" value="{% url 'courses:back_resource_library' %}">
+  {% endif %}
 
-  <div class="form-group">
-    <label for="{{ form.title.id_for_label }}">Titre</label>
-    {{ form.title }}
-    {{ form.title.errors }}
-  </div>
-
-  <div class="form-row">
-    <div class="form-group">
-      <label for="{{ form.resource_type.id_for_label }}">Type</label>
-      {{ form.resource_type }}
+  <section class="res-upload-section">
+    <h2>Resource type</h2>
+    <div class="res-type-grid" id="res-type-grid" role="radiogroup" aria-label="Resource type">
+      {% for value, label in form.fields.resource_type.choices %}
+      {% if value %}
+      <label class="res-type-opt {% if form.resource_type.value == value or form.initial.resource_type == value or form.instance.resource_type == value %}is-on{% endif %}">
+        <input type="radio" name="{{ form.resource_type.name }}" value="{{ value }}" {% if form.resource_type.value == value or form.instance.resource_type == value %}checked{% elif not form.instance.pk and value == "document" and not form.resource_type.value %}checked{% endif %}>
+        <span aria-hidden="true">
+          {% if value == "pdf" %}📕{% elif value == "video" %}🎥{% elif value == "presentation" %}📊{% elif value == "link" %}🔗{% elif value == "exercise" %}📝{% else %}📄{% endif %}
+        </span>
+        {{ label }}
+      </label>
+      {% endif %}
+      {% endfor %}
     </div>
+    {{ form.resource_type.errors }}
+  </section>
+
+  <section class="res-upload-section">
+    <h2>Details</h2>
     <div class="form-group">
-      <label for="{{ form.target_level.id_for_label }}">Niveau destiné *</label>
-      {{ form.target_level }}
-      <p class="help">Obligatoire — seuls les étudiants de ce parcours verront cette ressource.</p>
-      {{ form.target_level.errors }}
+      <label for="{{ form.title.id_for_label }}">Title</label>
+      {{ form.title }}
+      {{ form.title.errors }}
     </div>
-  </div>
-
-  <div class="form-group">
-    <label for="{{ form.description.id_for_label }}">Description</label>
-    {{ form.description }}
-  </div>
-
-  <div class="form-row">
+    {% if form.course %}
     <div class="form-group">
-      <label for="{{ form.file.id_for_label }}">Fichier</label>
+      <label for="{{ form.course.id_for_label }}">Course</label>
+      {{ form.course }}
+      {{ form.course.errors }}
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="{{ form.target_level.id_for_label }}">Target programme *</label>
+        {{ form.target_level }}
+        {{ form.target_level.errors }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.order.id_for_label }}">Order</label>
+        {{ form.order }}
+      </div>
+    </div>
+  </section>
+
+  <section class="res-upload-section">
+    <h2>File / link</h2>
+    <div class="dropzone" id="res-form-dropzone">
+      <strong>{% if resource and resource.file %}{{ resource.file.name }}{% else %}Drop a file here{% endif %}</strong>
+      <div style="font-size:0.85rem;margin-top:0.35rem;">or click to browse</div>
+    </div>
+    <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
       {{ form.file }}
-      {{ form.file.errors }}
-      {% if resource and resource.file %}
-      <p class="help">Fichier actuel : {{ resource.file.name }}</p>
+    </div>
+    {{ form.file.errors }}
+    <div class="res-file-info{% if resource and resource.file %} is-on{% endif %}" id="res-file-info">
+      {% if resource and resource.file %}Current file: {{ resource.file.name }}{% endif %}
+    </div>
+    <div class="form-group" style="margin-top:0.75rem;">
+      <label for="{{ form.url.id_for_label }}">URL</label>
+      {{ form.url }}
+      {{ form.url.errors }}
+    </div>
+  </section>
+
+  <section class="res-upload-section">
+    <h2>Visibility</h2>
+    <p class="help" style="margin-top:-0.35rem;">Students only see resources that are visible and not scheduled in the future.</p>
+    {% with state=resource.studio_state|default:"published" %}
+    <div class="studio-vis-panel" id="res-publish-modes">
+      <label class="studio-vis-option {% if not resource or state == 'published' %}is-active{% endif %}">
+        <input type="radio" name="publish_mode" value="visible" {% if not resource or state == "published" %}checked{% endif %}>
+        <span>
+          <strong>● Visible</strong>
+          <span>Available to students immediately (if the course is published)</span>
+        </span>
+      </label>
+      <label class="studio-vis-option {% if state == 'hidden' %}is-active{% endif %}">
+        <input type="radio" name="publish_mode" value="hidden" {% if state == "hidden" %}checked{% endif %}>
+        <span>
+          <strong>○ Hidden</strong>
+          <span>Kept private in Academic Studio</span>
+        </span>
+      </label>
+      <label class="studio-vis-option {% if state == 'scheduled' %}is-active{% endif %}">
+        <input type="radio" name="publish_mode" value="scheduled" {% if state == "scheduled" %}checked{% endif %}>
+        <span>
+          <strong>○ Scheduled publication</strong>
+          <span>Prepare now — auto-visible at the chosen date &amp; time</span>
+        </span>
+      </label>
+    </div>
+    {% endwith %}
+    <div class="res-schedule-fields {% if resource and resource.studio_state == 'scheduled' %}is-on{% endif %}" id="res-schedule-fields">
+      <div class="form-group">
+        <label for="{{ form.scheduled_at.id_for_label }}">Date &amp; time</label>
+        {{ form.scheduled_at }}
+        {{ form.scheduled_at.errors }}
+      </div>
+      {% if resource and resource.scheduled_at %}
+      <p class="help" style="align-self:end;">SCHEDULED FOR {{ resource.scheduled_at|date:"d M Y · H:i"|upper }}</p>
       {% endif %}
     </div>
-    <div class="form-group">
-      <label for="{{ form.order.id_for_label }}">Ordre d’affichage</label>
-      {{ form.order }}
+    <div hidden>{{ form.is_visible }}</div>
+    {{ form.is_visible.errors }}
+    <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;margin-top:0.85rem;">
+      {{ form.is_required }}
+      <label for="{{ form.is_required.id_for_label }}" style="margin:0;">Required resource</label>
     </div>
-  </div>
-
-  <div class="form-group">
-    <label for="{{ form.url.id_for_label }}">URL (liens / vidéos externes)</label>
-    {{ form.url }}
-    {{ form.url.errors }}
-  </div>
-
-  <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
-    {{ form.is_required }}
-    <label for="{{ form.is_required.id_for_label }}" style="margin:0;">Ressource obligatoire</label>
-  </div>
+  </section>
 
   <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Enregistrer</button>
-    <a href="{% url 'courses:back_course_detail' course.pk %}" class="btn btn-secondary">Annuler</a>
+    <button type="submit" class="btn btn-primary btn-glow" id="res-submit-btn">
+      {% if mode == "edit" %}Save changes{% else %}Upload / Save{% endif %}
+    </button>
+    <a href="{% if standalone %}{% url 'courses:back_resource_library' %}{% elif course %}{% url 'courses:back_course_detail' course.pk %}{% else %}{% url 'courses:back_resource_library' %}{% endif %}" class="btn btn-secondary">Cancel</a>
   </div>
 </form>
+{% endblock %}
+
+{% block teacher_js %}
+<script>
+(function () {
+  const typeGrid = document.getElementById("res-type-grid");
+  typeGrid?.querySelectorAll(".res-type-opt").forEach((opt) => {
+    const input = opt.querySelector("input");
+    input?.addEventListener("change", () => {
+      typeGrid.querySelectorAll(".res-type-opt").forEach((o) => o.classList.remove("is-on"));
+      opt.classList.add("is-on");
+    });
+  });
+
+  const modes = document.getElementById("res-publish-modes");
+  const scheduleFields = document.getElementById("res-schedule-fields");
+  const realVis = document.getElementById("id_is_visible");
+  function syncMode() {
+    const selected = modes?.querySelector('input[name="publish_mode"]:checked');
+    modes?.querySelectorAll(".studio-vis-option").forEach((o) => {
+      o.classList.toggle("is-active", o.contains(selected));
+    });
+    const mode = selected?.value || "visible";
+    scheduleFields?.classList.toggle("is-on", mode === "scheduled");
+    if (realVis) realVis.checked = mode !== "hidden";
+  }
+  modes?.querySelectorAll('input[name="publish_mode"]').forEach((r) => {
+    r.addEventListener("change", syncMode);
+  });
+  syncMode();
+
+  const drop = document.getElementById("res-form-dropzone");
+  const fileInput = document.getElementById("id_file");
+  const info = document.getElementById("res-file-info");
+  function showFile(file) {
+    if (!file || !info || !drop) return;
+    drop.querySelector("strong").textContent = file.name;
+    info.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
+    info.classList.add("is-on");
+  }
+  drop?.addEventListener("click", () => fileInput?.click());
+  drop?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    drop.classList.add("is-drag");
+  });
+  drop?.addEventListener("dragleave", () => drop.classList.remove("is-drag"));
+  drop?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drop.classList.remove("is-drag");
+    if (e.dataTransfer.files?.length && fileInput) {
+      fileInput.files = e.dataTransfer.files;
+      showFile(e.dataTransfer.files[0]);
+    }
+  });
+  fileInput?.addEventListener("change", () => {
+    if (fileInput.files?.[0]) showFile(fileInput.files[0]);
+  });
+})();
+</script>
 {% endblock %}

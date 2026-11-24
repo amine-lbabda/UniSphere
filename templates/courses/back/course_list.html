@@ -1,249 +1,218 @@
 ﻿{% extends "layouts/teacher.html" %}
-{% block title %}Mes modules — UniSphere{% endblock %}
-{% block page_title %}Mes modules{% endblock %}
-{% block page_sub %}CRUD complet · créer, modifier, publier, supprimer{% endblock %}
-{% block top_actions %}
-<a href="{% url 'courses:back_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ Nouveau module</a>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-  /* Layout forcé — stats + filtres en lignes */
-  .ml-stats {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px;
-    margin: 0 0 18px;
-  }
-  .ml-stat {
-    background: #fff;
-    border: 1px solid rgba(11,31,42,.08);
-    border-radius: 14px;
-    padding: 14px 16px;
-    box-shadow: 0 8px 22px rgba(11,31,42,.045);
-    min-height: 74px;
-  }
-  .ml-stat .ml-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    margin-bottom: 6px;
-  }
-  .ml-stat .ml-num {
-    display: block;
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    color: #0b1f2a;
-  }
-  .ml-stat.pub .ml-num { color: #0f766e; }
-  .ml-stat.draft .ml-num { color: #b45309; }
-
-  .ml-filters {
-    display: grid;
-    grid-template-columns: 1.4fr auto 1fr auto;
-    gap: 10px;
-    align-items: center;
-    background: #fff;
-    border: 1px solid rgba(11,31,42,.08);
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 18px;
-    box-shadow: 0 8px 22px rgba(11,31,42,.045);
-  }
-  .ml-filters .ml-search {
-    width: 100%;
-    margin: 0;
-  }
-  .ml-chips {
-    display: inline-flex;
-    gap: 6px;
-    flex-wrap: nowrap;
-  }
-  .ml-chip {
-    border: 1px solid rgba(11,31,42,.12);
-    background: #f8fafc;
-    color: #475569;
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 12px;
-    font-weight: 650;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .ml-chip.is-on {
-    background: linear-gradient(135deg, #3b5bdb, #22b8cf);
-    border-color: transparent;
-    color: #fff;
-  }
-  .ml-selects {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .ml-selects select {
-    width: 100% !important;
-    min-width: 0 !important;
-    margin: 0;
-  }
-  .ml-filter-btn { white-space: nowrap; }
-
-  .ml-actions {
-    display: inline-flex;
-    gap: 6px;
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-
-  @media (max-width: 1100px) {
-    .ml-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .ml-filters { grid-template-columns: 1fr; }
-    .ml-selects { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 640px) {
-    .ml-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-</style>
+{% block title %}Courses — Academic Studio{% endblock %}
+{% block page_title %}Courses{% endblock %}
+{% block page_sub %}Build, publish and manage your academic books{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ Create course</a>
 {% endblock %}
 
 {% block content %}
-<div class="ml-stats">
-  <div class="ml-stat">
-    <span class="ml-label">Total</span>
-    <span class="ml-num" data-count="{{ stats.total }}">0</span>
-  </div>
-  <div class="ml-stat pub">
-    <span class="ml-label">Publiés</span>
-    <span class="ml-num" data-count="{{ stats.published }}">0</span>
-  </div>
-  <div class="ml-stat draft">
-    <span class="ml-label">Brouillons</span>
-    <span class="ml-num" data-count="{{ stats.draft }}">0</span>
-  </div>
-  <div class="ml-stat">
-    <span class="ml-label">Étudiants</span>
-    <span class="ml-num" data-count="{{ stats.students }}">0</span>
-  </div>
-  <div class="ml-stat">
-    <span class="ml-label">Ressources</span>
-    <span class="ml-num" data-count="{{ stats.resources }}">0</span>
-  </div>
-  <div class="ml-stat">
-    <span class="ml-label">Quiz</span>
-    <span class="ml-num" data-count="{{ stats.quizzes }}">0</span>
-  </div>
+{% if visibility or resource_filter or request.GET.status %}
+<div class="studio-filter-banner">
+  <span>
+    Filtered view
+    {% if request.GET.status %}· status: {{ request.GET.status }}{% endif %}
+    {% if visibility %}· visibility: {{ visibility }}{% endif %}
+    {% if resource_filter %}· resources: {{ resource_filter }}{% endif %}
+  </span>
+  <a href="{% url 'courses:back_course_list' %}" class="btn btn-ghost btn-sm">Clear filters</a>
 </div>
+{% endif %}
 
-<form method="get" class="ml-filters" id="ml-filter-form">
-  <input type="search" id="mod-live-q" name="q" value="{{ request.GET.q }}" class="form-control ml-search" placeholder="Recherche (code, titre, niveau…)" autocomplete="off">
-
-  <div class="ml-chips" id="mod-status-chips">
-    <button type="button" class="ml-chip is-on" data-status="">Tous</button>
-    <button type="button" class="ml-chip" data-status="published">Publiés</button>
-    <button type="button" class="ml-chip" data-status="draft">Brouillons</button>
-    <button type="button" class="ml-chip" data-status="archived">Archivés</button>
+<section class="studio-course-stats" aria-label="Course statistics">
+  <div class="studio-course-stat">
+    <span>Total</span>
+    <strong data-count="{{ stats.total }}">0</strong>
   </div>
+  <div class="studio-course-stat is-ok">
+    <span>Visible</span>
+    <strong data-count="{{ stats.visible }}">0</strong>
+  </div>
+  <div class="studio-course-stat is-warn">
+    <span>Hidden</span>
+    <strong data-count="{{ stats.hidden }}">0</strong>
+  </div>
+  <div class="studio-course-stat">
+    <span>Students</span>
+    <strong data-count="{{ stats.students }}">0</strong>
+  </div>
+  <div class="studio-course-stat">
+    <span>Resources</span>
+    <strong data-count="{{ stats.resources }}">0</strong>
+  </div>
+  <div class="studio-course-stat">
+    <span>Quizzes</span>
+    <strong data-count="{{ stats.quizzes }}">0</strong>
+  </div>
+</section>
 
-  <div class="ml-selects">
+<form method="get" class="studio-course-toolbar" id="studio-course-filters">
+  <input
+    type="search"
+    id="mod-live-q"
+    name="q"
+    value="{{ request.GET.q }}"
+    class="form-control"
+    placeholder="Search courses…"
+    autocomplete="off"
+    aria-label="Search courses"
+  >
+  <div class="studio-filter-chips" id="mod-status-chips" role="group" aria-label="Quick filters">
+    <button type="button" class="studio-chip {% if not visibility and not request.GET.status %}is-on{% endif %}" data-vis="" data-status="">All</button>
+    <button type="button" class="studio-chip {% if visibility == 'visible' %}is-on{% endif %}" data-vis="visible">Visible</button>
+    <button type="button" class="studio-chip {% if visibility == 'hidden' %}is-on{% endif %}" data-vis="hidden">Hidden</button>
+    <button type="button" class="studio-chip {% if request.GET.status == 'published' %}is-on{% endif %}" data-status="published">Published</button>
+    <button type="button" class="studio-chip {% if request.GET.status == 'draft' %}is-on{% endif %}" data-status="draft">Draft</button>
+    <button type="button" class="studio-chip {% if request.GET.status == 'archived' %}is-on{% endif %}" data-status="archived">Archived</button>
+  </div>
+  <div class="studio-toolbar-selects">
     {{ form.category }}
     {{ form.level }}
   </div>
-
-  <button type="submit" class="btn btn-secondary btn-sm ml-filter-btn">Filtrer</button>
+  <input type="hidden" name="status" id="filter-status" value="{{ request.GET.status }}">
+  <input type="hidden" name="visibility" id="filter-visibility" value="{{ visibility }}">
+  {% if resource_filter %}<input type="hidden" name="resource" value="{{ resource_filter }}">{% endif %}
+  <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
 </form>
 
 {% if courses %}
-<div class="table-wrap">
-  <table class="data-table" id="mod-grid">
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Module</th>
-        <th>Niveau</th>
-        <th>Département</th>
-        <th>Statut</th>
-        <th>Étud.</th>
-        <th>Ress.</th>
-        <th>Quiz</th>
-        <th>Vol.</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in courses %}
-      <tr
-        class="mod-row"
-        data-status="{{ c.status }}"
-        data-search="{{ c.code }} {{ c.title }} {{ c.get_level_display }} {{ c.category.name|default:'' }}"
-      >
-        <td><strong>{{ c.code }}</strong></td>
-        <td>
-          <a href="{% url 'courses:back_course_detail' c.pk %}" style="font-weight:650;color:inherit;">{{ c.title }}</a>
-          {% if c.short_description %}<div style="font-size:0.78rem;color:var(--slate);margin-top:0.15rem;">{{ c.short_description|truncatewords:10 }}</div>{% endif %}
-        </td>
-        <td><span class="chip">{{ c.get_level_display }}</span></td>
-        <td>{% if c.category %}{{ c.category.name }}{% else %}—{% endif %}</td>
-        <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
-        <td>{{ c.student_count }}</td>
-        <td>{{ c.res_count }}</td>
-        <td>{{ c.quiz_count }}</td>
-        <td>{{ c.duration_hours }} h</td>
-        <td>
-          <div class="ml-actions">
-            <a href="{% url 'courses:back_course_detail' c.pk %}" class="btn btn-sm btn-primary">Ouvrir</a>
-            <a href="{% url 'courses:back_course_edit' c.pk %}" class="btn btn-sm btn-secondary">Modifier</a>
-            <form method="post" action="{% url 'courses:back_course_delete' c.pk %}" data-confirm="Supprimer définitivement « {{ c.code }} — {{ c.title }} » ?">
+<div class="studio-course-grid" id="mod-grid">
+  {% for c in courses %}
+  {% with ready=c.readiness_score %}
+  <article
+    class="studio-course-card reveal"
+    data-status="{{ c.status }}"
+    data-visible="{% if c.is_student_accessible %}1{% else %}0{% endif %}"
+    data-search="{{ c.code }} {{ c.title }} {{ c.get_level_display }} {{ c.category.name|default:'' }} {{ c.instructor.get_full_name|default:c.instructor.username }}"
+    data-course-id="{{ c.pk }}"
+  >
+    <div
+      class="studio-course-cover"
+      {% if c.cover %}style="background-image:linear-gradient(135deg, rgba(91,92,226,0.55), rgba(6,182,212,0.35)), url('{{ c.cover.url }}');"{% endif %}
+      aria-hidden="true"
+    ></div>
+    <div class="studio-course-body">
+      <div class="studio-course-meta">
+        <span class="studio-course-code">{{ c.code }}</span>
+        <span class="studio-state" data-state="{{ c.studio_state }}" data-studio-state>
+          <span data-studio-label>{{ c.studio_state_label }}</span>
+        </span>
+        <span class="chip">{{ c.get_level_display }}</span>
+      </div>
+      <h3 class="studio-course-title">
+        <a href="{% url 'courses:back_course_detail' c.pk %}">📘 {{ c.title }}</a>
+      </h3>
+      {% if c.short_description or c.description %}
+      <p class="studio-course-desc">{{ c.short_description|default:c.description|truncatewords:18 }}</p>
+      {% endif %}
+      <p class="studio-course-teacher">Teacher: {{ c.instructor.get_full_name|default:c.instructor.username }}</p>
+      <div class="studio-course-facts" aria-label="Course metrics">
+        <div class="studio-course-fact"><span>Students</span><strong>{{ c.student_count }}</strong></div>
+        <div class="studio-course-fact"><span>Resources</span><strong>{{ c.res_count }}</strong></div>
+        <div class="studio-course-fact"><span>Quizzes</span><strong>{{ c.quiz_count }}</strong></div>
+      </div>
+      <div class="studio-course-progress">
+        <div class="studio-course-progress-label">
+          <span>Content readiness</span>
+          <span>{{ ready }}%</span>
+        </div>
+        <div class="studio-course-progress-bar" aria-hidden="true">
+          <i style="width:{{ ready }}%"></i>
+        </div>
+      </div>
+      <div class="studio-course-foot">
+          <div class="studio-course-actions">
+            <a href="{% url 'courses:back_course_detail' c.pk %}" class="btn btn-sm btn-primary">Manage</a>
+            <a href="{% url 'courses:back_course_builder' c.pk %}" class="btn btn-sm btn-secondary">Builder</a>
+            <a href="{% url 'courses:back_course_analytics' c.pk %}" class="btn btn-sm btn-ghost">Analytics</a>
+            <a href="{% url 'courses:back_course_preview' c.pk %}" class="btn btn-sm btn-ghost">Preview</a>
+          <button
+            type="button"
+            class="vis-toggle"
+            data-toggle-visibility="{% url 'courses:back_course_toggle_visibility' c.pk %}"
+            aria-label="Toggle visibility for {{ c.title }}"
+          >
+            <span class="vis-pill {% if c.is_student_accessible %}on{% else %}off{% endif %}">
+              {% if c.is_student_accessible %}🟢{% else %}🔒{% endif %}
+              <span class="vis-text">{{ c.visibility_label }}</span>
+            </span>
+          </button>
+        </div>
+        <details class="studio-menu">
+          <summary aria-label="More actions">⋮</summary>
+          <div class="studio-menu-panel">
+            <a href="{% url 'courses:back_course_edit' c.pk %}">Edit</a>
+            <a href="{% url 'courses:back_course_preview' c.pk %}">Preview as student</a>
+            <form method="post" action="{% url 'courses:back_course_delete' c.pk %}" data-confirm="Delete « {{ c.code }} — {{ c.title }} » permanently?">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+              <button type="submit" class="is-danger">Delete</button>
             </form>
           </div>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        </details>
+      </div>
+      <div class="studio-course-updated">Updated {{ c.updated_at|date:"d M Y" }}</div>
+    </div>
+  </article>
+  {% endwith %}
+  {% endfor %}
 </div>
-<p id="mod-empty-filter" hidden style="text-align:center;color:var(--slate);padding:1.25rem;">Aucun module ne correspond à votre recherche.</p>
+<p id="mod-empty-filter" hidden class="studio-empty-inline" style="text-align:center;padding:1.5rem;">No courses match your search.</p>
 {% else %}
 <div class="empty-state">
   <div class="icon">📚</div>
-  <p>Aucun module pour l’instant.</p>
-  <a href="{% url 'courses:back_course_create' %}" class="btn btn-primary" style="margin-top:1rem;">Créer mon premier module</a>
+  <p><strong>No courses yet.</strong></p>
+  <p>Create your first course to get started.</p>
+  <a href="{% url 'courses:back_course_create' %}" class="btn btn-primary" style="margin-top:1rem;">+ Create course</a>
 </div>
 {% endif %}
 {% endblock %}
 
-{% block extra_js %}
+{% block teacher_js %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const rows = [...document.querySelectorAll("#mod-grid .mod-row")];
+  const cards = [...document.querySelectorAll("#mod-grid .studio-course-card")];
   const qInput = document.getElementById("mod-live-q");
   const empty = document.getElementById("mod-empty-filter");
-  let status = "";
+  const statusInput = document.getElementById("filter-status");
+  const visInput = document.getElementById("filter-visibility");
+  let status = statusInput?.value || "";
+  let vis = visInput?.value || "";
 
   const apply = () => {
-    if (!rows.length) return;
+    if (!cards.length) return;
     const q = (qInput?.value || "").trim().toLowerCase();
-    let visible = 0;
-    rows.forEach((row) => {
-      const okStatus = !status || row.dataset.status === status;
-      const okQ = !q || (row.dataset.search || "").toLowerCase().includes(q);
-      const show = okStatus && okQ;
-      row.hidden = !show;
-      if (show) visible += 1;
+    let shown = 0;
+    cards.forEach((card) => {
+      const okStatus = !status || card.dataset.status === status;
+      const okVis =
+        !vis ||
+        (vis === "visible" && card.dataset.visible === "1") ||
+        (vis === "hidden" && card.dataset.visible === "0");
+      const okQ = !q || (card.dataset.search || "").toLowerCase().includes(q);
+      const show = okStatus && okVis && okQ;
+      card.hidden = !show;
+      if (show) shown += 1;
     });
-    if (empty) empty.hidden = visible > 0;
+    if (empty) empty.hidden = shown > 0;
   };
 
   qInput?.addEventListener("input", apply);
-  document.querySelectorAll("#mod-status-chips .ml-chip").forEach((chip) => {
+  document.querySelectorAll("#mod-status-chips .studio-chip").forEach((chip) => {
     chip.addEventListener("click", () => {
-      document.querySelectorAll("#mod-status-chips .ml-chip").forEach((c) => c.classList.remove("is-on"));
+      document.querySelectorAll("#mod-status-chips .studio-chip").forEach((c) => c.classList.remove("is-on"));
       chip.classList.add("is-on");
       status = chip.dataset.status || "";
+      vis = chip.dataset.vis || "";
+      if (statusInput) statusInput.value = status;
+      if (visInput) visInput.value = vis;
       apply();
+    });
+  });
+  apply();
+
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll(".studio-menu[open]").forEach((d) => {
+      if (!d.contains(e.target)) d.removeAttribute("open");
     });
   });
 });

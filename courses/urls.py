@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import admin_views, views
+from . import admin_views, analytics_views, builder_views, library_views, views
 
 app_name = "courses"
 
@@ -33,6 +33,8 @@ urlpatterns = [
     ),
     # Étudiant
     path("etudiant/", views.student_dashboard, name="student_dashboard"),
+    path("etudiant/dashboard/", views.student_charts, name="student_charts"),
+    path("etudiant/ressources/", views.student_resources, name="student_resources"),
     path("etudiant/quiz/", views.student_quizzes, name="student_quizzes"),
     path("etudiant/resultats/", views.student_results, name="student_results"),
     # Enseignant
@@ -56,9 +58,69 @@ urlpatterns = [
         name="back_course_status",
     ),
     path(
+        "back/modules/<int:pk>/visibilite/",
+        views.back_course_toggle_visibility,
+        name="back_course_toggle_visibility",
+    ),
+    path(
+        "back/modules/<int:pk>/apercu/",
+        views.back_course_preview,
+        name="back_course_preview",
+    ),
+    path(
+        "back/modules/<int:pk>/analytics/",
+        analytics_views.back_course_analytics,
+        name="back_course_analytics",
+    ),
+    path(
+        "back/ressources/<int:pk>/apercu/",
+        views.back_resource_preview,
+        name="back_resource_preview",
+    ),
+    path(
+        "back/quiz/<int:pk>/apercu/",
+        views.back_quiz_preview,
+        name="back_quiz_preview",
+    ),
+    path(
+        "back/modules/<int:pk>/builder/",
+        builder_views.back_course_builder,
+        name="back_course_builder",
+    ),
+    path(
+        "back/modules/<int:course_pk>/builder/chapters/",
+        builder_views.back_chapter_create,
+        name="back_chapter_create",
+    ),
+    path(
+        "back/modules/<int:pk>/builder/reorder/",
+        builder_views.back_course_builder_reorder,
+        name="back_course_builder_reorder",
+    ),
+    path(
+        "back/chapters/<int:pk>/rename/",
+        builder_views.back_chapter_rename,
+        name="back_chapter_rename",
+    ),
+    path(
+        "back/chapters/<int:pk>/delete/",
+        builder_views.back_chapter_delete,
+        name="back_chapter_delete",
+    ),
+    path(
         "back/modules/<int:course_pk>/ressources/nouveau/",
         views.back_resource_create,
         name="back_resource_create",
+    ),
+    path(
+        "back/ressources/",
+        library_views.back_resource_library,
+        name="back_resource_library",
+    ),
+    path(
+        "back/ressources/nouveau/",
+        library_views.back_resource_create_standalone,
+        name="back_resource_create_standalone",
     ),
     path(
         "back/ressources/<int:pk>/modifier/",
@@ -69,6 +131,16 @@ urlpatterns = [
         "back/ressources/<int:pk>/supprimer/",
         views.back_resource_delete,
         name="back_resource_delete",
+    ),
+    path(
+        "back/ressources/<int:pk>/visibilite/",
+        views.back_resource_toggle_visibility,
+        name="back_resource_toggle_visibility",
+    ),
+    path(
+        "back/ressources/<int:pk>/publication/",
+        library_views.back_resource_set_visibility,
+        name="back_resource_set_visibility",
     ),
     path(
         "back/modules/<int:course_pk>/quiz/nouveau/",
@@ -82,6 +154,11 @@ urlpatterns = [
         name="back_quiz_create_standalone",
     ),
     path("back/quiz/<int:pk>/", views.back_quiz_detail, name="back_quiz_detail"),
+    path(
+        "back/quiz/<int:pk>/publication/",
+        views.back_quiz_toggle_publish,
+        name="back_quiz_toggle_publish",
+    ),
     path(
         "back/quiz/<int:pk>/modifier/",
         views.back_quiz_edit,

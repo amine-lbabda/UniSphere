@@ -1,40 +1,85 @@
 {% extends "layouts/app_shell.html" %}
+{% load static %}
 {% block body_class %}space-admin{% endblock %}
-{% block space_label %}Console admin{% endblock %}
+{% block space_label %}Control Center{% endblock %}
 {% block brand_url %}{% url 'courses:admin_dashboard' %}{% endblock %}
 
+{% block pre_shell %}
+<div class="living-bg" aria-hidden="true">
+  <span class="b1"></span><span class="b2"></span><span class="b3"></span>
+</div>
+<button type="button" class="studio-nav-backdrop" id="studio-nav-backdrop" aria-label="Close menu"></button>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/academic-studio.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-courses.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-resources.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-quizzes.css' %}">
+<link rel="stylesheet" href="{% static 'css/teacher-lms.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-polish.css' %}">
+<link rel="stylesheet" href="{% static 'css/themes.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin-studio.css' %}">
+{% block admin_css %}{% endblock %}
+{% endblock %}
+
+{% block nav_toggle %}
+<button type="button" class="studio-nav-toggle" id="studio-nav-toggle" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open menu">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>
+{% endblock %}
+
 {% block sidebar %}
+<p class="nav-section-label">Control Center</p>
 <a href="{% url 'courses:admin_dashboard' %}" class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
-  <span class="nav-ico">📊</span> Dashboard global
+  <span class="nav-ico" aria-hidden="true">📊</span> Dashboard
 </a>
 <a href="{% url 'courses:admin_users' %}" class="{% if 'admin_user' in request.resolver_match.url_name %}active{% endif %}">
-  <span class="nav-ico">👥</span> Gestion des utilisateurs
-</a>
-<a href="{% url 'courses:profile' %}" class="{% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'profile_edit' %}active{% endif %}">
-  <span class="nav-ico">👤</span> Mon profil
+  <span class="nav-ico" aria-hidden="true">👥</span> Users
 </a>
 <a href="{% url 'courses:admin_courses' %}" class="{% if 'admin_course' in request.resolver_match.url_name %}active{% endif %}">
-  <span class="nav-ico">📚</span> Tous les modules
+  <span class="nav-ico" aria-hidden="true">📚</span> Courses
 </a>
 <a href="{% url 'courses:admin_resources' %}" class="{% if 'admin_resource' in request.resolver_match.url_name %}active{% endif %}">
-  <span class="nav-ico">📎</span> Toutes les ressources
+  <span class="nav-ico" aria-hidden="true">📁</span> Resources
 </a>
 <a href="{% url 'courses:admin_quizzes' %}" class="{% if 'admin_quiz' in request.resolver_match.url_name or 'admin_question' in request.resolver_match.url_name %}active{% endif %}">
-  <span class="nav-ico">📝</span> Tous les quiz
+  <span class="nav-ico" aria-hidden="true">📝</span> Quizzes
 </a>
 <a href="{% url 'courses:admin_enrollments' %}" class="{% if request.resolver_match.url_name == 'admin_enrollments' %}active{% endif %}">
-  <span class="nav-ico">🔗</span> Inscriptions
+  <span class="nav-ico" aria-hidden="true">🔗</span> Enrollments
 </a>
 <a href="{% url 'courses:admin_categories' %}" class="{% if 'admin_categor' in request.resolver_match.url_name %}active{% endif %}">
-  <span class="nav-ico">🏷️</span> Départements
+  <span class="nav-ico" aria-hidden="true">🏷️</span> Departments
 </a>
 <a href="{% url 'courses:admin_notifications' %}" class="{% if request.resolver_match.url_name == 'admin_notifications' %}active{% endif %}">
-  <span class="nav-ico">📣</span> Diffuser une alerte
+  <span class="nav-ico" aria-hidden="true">📣</span> Broadcast
 </a>
-<a href="/admin/" target="_blank">
-  <span class="nav-ico">⚙️</span> Django Admin
+<div class="side-divider" aria-hidden="true"></div>
+<p class="nav-section-label">Account</p>
+<a href="{% url 'courses:profile' %}" class="{% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">👤</span> Profile
 </a>
 <a href="{% url 'courses:back_dashboard' %}">
-  <span class="nav-ico">🎓</span> Vue enseignant
+  <span class="nav-ico" aria-hidden="true">🎓</span> Academic Studio
 </a>
+<a href="/admin/" target="_blank" rel="noopener">
+  <span class="nav-ico" aria-hidden="true">⚙️</span> Django Admin
+</a>
+{% endblock %}
+
+{% block top_actions %}
+{% block admin_actions %}{% endblock %}
+<button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+  <span aria-hidden="true">🌙</span> Study Mode
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/academic-studio.js' %}"></script>
+<script src="{% static 'js/teacher-lms.js' %}"></script>
+{% block admin_js %}{% endblock %}
 {% endblock %}

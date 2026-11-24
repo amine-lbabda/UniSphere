@@ -157,6 +157,11 @@ class Course(models.Model):
         blank=True,
         help_text="Texte libre : ce que ce module exige (compétences, cours, outils…).",
     )
+    is_visible = models.BooleanField(
+        "Visible pour les étudiants",
+        default=True,
+        help_text="Si désactivé, le module reste masqué même s’il est publié.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     published_at = models.DateTimeField(null=True, blank=True)
@@ -188,12 +193,79 @@ class Course(models.Model):
         return self.status == self.Status.PUBLISHED
 
     @property
+    def is_student_accessible(self):
+        """Publié ET visible — règle côté étudiants."""
+        return self.is_published and self.is_visible
+
+    @property
+    def visibility_label(self):
+        if self.is_student_accessible:
+            return "Visible"
+        return "Masqué"
+
+    @property
+    def studio_state(self):
+        """Publication/visibility state for Academic Studio UI (no extra DB field)."""
+        if self.status == self.Status.ARCHIVED:
+            return "archived"
+        if self.status == self.Status.DRAFT:
+            return "draft"
+        if self.is_student_accessible:
+            return "published"
+        return "hidden"
+
+    @property
+    def studio_state_label(self):
+        return {
+            "draft": "Draft",
+            "published": "Published",
+            "hidden": "Hidden",
+            "archived": "Archived",
+        }.get(self.studio_state, self.get_status_display())
+
+    @property
     def status_badge_class(self):
         return {
             self.Status.DRAFT: "badge-draft",
             self.Status.PUBLISHED: "badge-published",
             self.Status.ARCHIVED: "badge-archived",
         }.get(self.status, "")
+
+    def readiness_score(self, res_count=None, quiz_count=None, student_count=None):
+        """Content readiness 0–100 from available counts (not student progress)."""
+        resources = (
+            res_count
+            if res_count is not None
+            else getattr(self, "res_count", None)
+        )
+        quizzes = (
+            quiz_count
+            if quiz_count is not None
+            else getattr(self, "quiz_count", None)
+        )
+        students = (
+            student_count
+            if student_count is not None
+            else getattr(self, "student_count", None)
+        )
+        if resources is None:
+            resources = self.resources.count()
+        if quizzes is None:
+            quizzes = self.quizzes.count()
+        if students is None:
+            students = self.enrollments.count()
+        score = 10
+        if self.status == self.Status.PUBLISHED:
+            score += 25
+        elif self.status == self.Status.DRAFT:
+            score += 5
+        if self.is_visible:
+            score += 10
+        score += min(int(resources), 5) * 8
+        score += min(int(quizzes), 3) * 7
+        if students:
+            score += 10
+        return max(0, min(100, score))
 
     def get_level_display(self):
         return PROGRAM_LABELS.get(self.level, self.level)
@@ -207,6 +279,27 @@ class Course(models.Model):
         return filiere_label(self.level)
 
 
+class CourseChapter(models.Model):
+    """Chapter / section inside a course (Academic Studio Course Builder)."""
+
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="chapters",
+        verbose_name="Cours",
+    )
+    title = models.CharField("Titre du chapitre", max_length=200)
+    order = models.PositiveIntegerField("Ordre", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Chapitre"
+        verbose_name_plural = "Chapitres"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.course.code} · {self.title}"
+
 
 class Resource(models.Model):
     class ResourceType(models.TextChoices):
@@ -214,12 +307,22 @@ class Resource(models.Model):
         VIDEO = "video", "Vidéo"
         LINK = "link", "Lien"
         DOCUMENT = "document", "Document"
+        PRESENTATION = "presentation", "Présentation"
+        EXERCISE = "exercise", "Exercice / TP"
 
     course = models.ForeignKey(
         Course,
         on_delete=models.CASCADE,
         related_name="resources",
         verbose_name="Module",
+    )
+    chapter = models.ForeignKey(
+        "CourseChapter",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="resources",
+        verbose_name="Chapitre",
     )
     title = models.CharField("Titre", max_length=200)
     resource_type = models.CharField(
@@ -245,7 +348,19 @@ class Resource(models.Model):
     )
     order = models.PositiveIntegerField("Ordre", default=0)
     is_required = models.BooleanField("Obligatoire", default=False)
+    is_visible = models.BooleanField(
+        "Visible pour les étudiants",
+        default=True,
+        help_text="Une ressource masquée reste invisible même si le module est publié.",
+    )
+    scheduled_at = models.DateTimeField(
+        "Publication programmée",
+        null=True,
+        blank=True,
+        help_text="Si défini dans le futur, la ressource reste invisible jusqu’à cette date.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Ressource"
@@ -270,7 +385,46 @@ class Resource(models.Model):
             self.ResourceType.VIDEO: "🎬",
             self.ResourceType.LINK: "🔗",
             self.ResourceType.DOCUMENT: "📎",
+            self.ResourceType.PRESENTATION: "📊",
+            self.ResourceType.EXERCISE: "📝",
         }.get(self.resource_type, "📁")
+
+    @property
+    def is_scheduled_future(self):
+        from django.utils import timezone
+
+        return bool(self.scheduled_at and self.scheduled_at > timezone.now())
+
+    @property
+    def is_available_to_students(self):
+        """Server-side gate: visible flag + schedule window."""
+        if not self.is_visible:
+            return False
+        if self.is_scheduled_future:
+            return False
+        return True
+
+    @property
+    def studio_state(self):
+        if self.is_scheduled_future:
+            return "scheduled"
+        if self.is_visible:
+            return "published"
+        return "hidden"
+
+    @property
+    def studio_state_label(self):
+        return {
+            "published": "Published",
+            "hidden": "Hidden",
+            "scheduled": "Scheduled",
+        }.get(self.studio_state, self.visibility_label)
+
+    @property
+    def visibility_label(self):
+        if self.is_scheduled_future:
+            return "Scheduled"
+        return "Visible" if self.is_visible else "Masqué"
 
 
 class Enrollment(models.Model):
@@ -305,19 +459,28 @@ class Quiz(models.Model):
         related_name="quizzes",
         verbose_name="Module",
     )
+    chapter = models.ForeignKey(
+        CourseChapter,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quizzes",
+        verbose_name="Chapitre",
+    )
     title = models.CharField("Titre", max_length=200)
     description = models.TextField("Description", blank=True)
     duration_minutes = models.PositiveIntegerField("Durée (min)", default=15)
     passing_score = models.PositiveIntegerField("Seuil de réussite (%)", default=60)
     is_published = models.BooleanField("Publié", default=False)
     due_date = models.DateTimeField("Échéance", null=True, blank=True)
+    order = models.PositiveIntegerField("Ordre", default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Quiz"
         verbose_name_plural = "Quiz"
-        ordering = ["-updated_at"]
+        ordering = ["order", "-updated_at"]
 
     def __str__(self):
         return f"{self.title} ({self.course.code})"
@@ -432,6 +595,49 @@ class Notification(models.Model):
         return self.title
 
 
+def sync_program_enrollments(course, *, notify=False, notify_callback=None):
+    """
+    Règle métier : un module accessible (publié + visible) pour un parcours
+    est affecté à TOUS les étudiants de ce parcours (ex. tous les 1A).
+    Returns newly enrolled User instances.
+    """
+    if not course or not course.level or not course.is_student_accessible:
+        return []
+    students = UserProfile.objects.filter(
+        role=UserProfile.Role.STUDENT,
+        academic_level=course.level,
+    ).select_related("user")
+    newly = []
+    for sp in students:
+        _, was_created = Enrollment.objects.get_or_create(
+            student=sp.user, course=course
+        )
+        if was_created:
+            newly.append(sp.user)
+            if notify and notify_callback:
+                notify_callback(sp.user, course)
+    return newly
+
+
+def make_course_available_to_program(course, *, notify=False, notify_callback=None):
+    """
+    Si le module est marqué visible pour un parcours : le publie si besoin,
+    puis inscrit tous les élèves de cette classe.
+    """
+    if not course or not course.level:
+        return []
+    if course.is_visible and course.status != Course.Status.PUBLISHED:
+        course.status = Course.Status.PUBLISHED
+        if not course.published_at:
+            from django.utils import timezone
+
+            course.published_at = timezone.now()
+        course.save(update_fields=["status", "published_at", "updated_at"])
+    return sync_program_enrollments(
+        course, notify=notify, notify_callback=notify_callback
+    )
+
+
 def assign_modules_for_student(user):
     """Affecte automatiquement les modules publiés correspondant au parcours de l'étudiant."""
     try:
@@ -442,6 +648,7 @@ def assign_modules_for_student(user):
         return []
     courses = Course.objects.filter(
         status=Course.Status.PUBLISHED,
+        is_visible=True,
         level=profile.academic_level,
     )
     created = []

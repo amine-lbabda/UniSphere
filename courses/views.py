@@ -3,8 +3,10 @@ import json
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -28,6 +30,8 @@ from .models import (
     QuizAttempt,
     Resource,
     assign_modules_for_student,
+    make_course_available_to_program,
+    sync_program_enrollments,
 )
 from .programs import PROGRAM_DEFS, Filiere, dept_levels_by_category_id
 from .roles import (
@@ -56,14 +60,34 @@ def _student_program(user):
 
 
 def _published_for_student(user):
-    """Modules publiés visibles uniquement pour le parcours de l'étudiant."""
+    """Modules publiés ET visibles pour le parcours de l'étudiant."""
     program = _student_program(user)
-    qs = Course.objects.filter(status=Course.Status.PUBLISHED)
+    qs = Course.objects.filter(status=Course.Status.PUBLISHED, is_visible=True)
     if program:
         qs = qs.filter(level=program)
     else:
         qs = qs.none()
     return qs
+
+
+def _student_visible_resources(course, program):
+    """Ressources accessibles à un étudiant du parcours donné (chapter order)."""
+    resources = course.resources.select_related("chapter").order_by(
+        "chapter__order", "order", "created_at"
+    )
+    return [
+        r
+        for r in resources
+        if r.is_available_to_students
+        and (r.target_level or course.level) == program
+    ]
+
+
+def _wants_json(request):
+    return (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or "application/json" in (request.headers.get("Accept") or "")
+    )
 
 
 def _notify(recipient, title, message, level=Notification.Level.INFO, link="", course=None):
@@ -74,6 +98,26 @@ def _notify(recipient, title, message, level=Notification.Level.INFO, link="", c
         level=level,
         link=link,
         course=course,
+    )
+
+
+def _notify_course_assigned(student, course):
+    _notify(
+        student,
+        f"Nouveau module — {course.code}",
+        f"« {course.title} » est disponible pour votre niveau ({course.get_level_display()}).",
+        level=Notification.Level.INFO,
+        link=course.get_absolute_url(),
+        course=course,
+    )
+
+
+def _assign_course_to_class(course, *, notify=True):
+    """Publie si besoin + inscrit tous les élèves du parcours cible."""
+    return make_course_available_to_program(
+        course,
+        notify=notify,
+        notify_callback=_notify_course_assigned if notify else None,
     )
 
 
@@ -263,7 +307,7 @@ def front_catalog(request):
         student_level = _student_program(request.user)
     else:
         courses = (
-            Course.objects.filter(status=Course.Status.PUBLISHED)
+            Course.objects.filter(status=Course.Status.PUBLISHED, is_visible=True)
             .select_related("category", "instructor")
             .annotate(res_count=Count("resources", distinct=True))
         )
@@ -294,6 +338,19 @@ def front_catalog(request):
         "locked_to_level": user_is_student(request.user),
     }
     if user_is_student(request.user):
+        # Cartes académiques avec progression réelle
+        catalog_cards = []
+        for course in courses:
+            quizzes_c = list(course.quizzes.filter(is_published=True))
+            prog = _module_progress(request.user, course, quizzes_c)
+            catalog_cards.append(
+                {
+                    "course": course,
+                    "progress": prog,
+                    "res_count": getattr(course, "res_count", course.resources.count()),
+                }
+            )
+        context["catalog_cards"] = catalog_cards
         return render(request, "courses/student/catalog.html", context)
     return render(request, "courses/front/catalog.html", context)
 
@@ -306,8 +363,11 @@ def front_detail(request, slug):
         slug=slug,
         status=Course.Status.PUBLISHED,
     )
-    # Étudiant : uniquement modules publiés de SON parcours
+    # Étudiant : publié + visible + parcours
     if user_is_student(request.user):
+        if not course.is_visible:
+            messages.error(request, "Ce module n’est pas accessible.")
+            return redirect("courses:student_dashboard")
         program = _student_program(request.user)
         if course.level != program:
             messages.error(
@@ -318,20 +378,18 @@ def front_detail(request, slug):
         assign_modules_for_student(request.user)
 
     related_qs = Course.objects.filter(
-        status=Course.Status.PUBLISHED, category=course.category
+        status=Course.Status.PUBLISHED,
+        is_visible=True,
+        category=course.category,
     ).exclude(pk=course.pk)
     if user_is_student(request.user):
         related_qs = related_qs.filter(level=_student_program(request.user))
     related = related_qs[:3]
 
-    # Ressources : étudiant ne voit que celles destinées à son parcours
+    # Ressources : parcours + is_visible pour étudiants
     if user_is_student(request.user):
         program = _student_program(request.user)
-        visible_resources = [
-            r
-            for r in course.resources.all()
-            if (r.target_level or course.level) == program
-        ]
+        visible_resources = _student_visible_resources(course, program)
     else:
         visible_resources = list(course.resources.all())
 
@@ -382,7 +440,9 @@ def front_detail(request, slug):
 @require_POST
 def front_enroll(request, slug):
     """Inscription uniquement si le module publié cible le parcours de l'étudiant."""
-    course = get_object_or_404(Course, slug=slug, status=Course.Status.PUBLISHED)
+    course = get_object_or_404(
+        Course, slug=slug, status=Course.Status.PUBLISHED, is_visible=True
+    )
     if course.level != _student_program(request.user):
         messages.error(
             request,
@@ -554,7 +614,9 @@ def student_dashboard(request):
     my_courses = [
         e.course
         for e in enrollments
-        if e.course.status == Course.Status.PUBLISHED and e.course.level == program
+        if e.course.status == Course.Status.PUBLISHED
+        and e.course.is_visible
+        and e.course.level == program
     ]
     course_cards = []
     total_progress = 0
@@ -590,6 +652,116 @@ def student_dashboard(request):
         q for q in quizzes
         if q.due_date and q.due_date >= timezone.now()
     ][:4]
+
+    # Données desk / livre (réelles uniquement)
+    library_resources = []
+    for course in my_courses:
+        for r in course.resources.all():
+            if not r.is_available_to_students:
+                continue
+            target = r.target_level or course.level
+            if target == program:
+                library_resources.append({"resource": r, "course": course})
+    library_resources = library_resources[:24]
+    resource_total = sum(
+        1
+        for course in my_courses
+        for r in course.resources.all()
+        if r.is_available_to_students
+        and (r.target_level or course.level) == program
+    )
+    recent_notifications = list(
+        Notification.objects.filter(recipient=request.user).order_by("-created_at")[:5]
+    )
+    hour = timezone.localtime().hour
+    if hour < 12:
+        greeting = "Bonjour"
+    elif hour < 18:
+        greeting = "Bon après-midi"
+    else:
+        greeting = "Bonsoir"
+
+    unread = Notification.objects.filter(
+        recipient=request.user, is_read=False
+    ).count()
+    attention_count = len(upcoming) + unread
+    if upcoming:
+        contextual_message = (
+            f"Votre prochain quiz approche : « {upcoming[0].title} »."
+        )
+    elif unread:
+        contextual_message = (
+            f"Vous avez {unread} alerte{'s' if unread > 1 else ''} à consulter."
+        )
+    elif attention_count == 0:
+        contextual_message = "Vous êtes à jour pour aujourd’hui."
+    else:
+        contextual_message = (
+            f"Vous avez {attention_count} élément"
+            f"{'s' if attention_count > 1 else ''} qui mérite"
+            f"{'' if attention_count > 1 else ''} attention."
+        )
+
+    # Today's Focus — premier quiz à échéance, sinon 1re alerte, sinon None
+    focus = None
+    if upcoming:
+        q0 = upcoming[0]
+        focus = {
+            "kind": "quiz",
+            "title": q0.title,
+            "subtitle": (
+                f"{q0.course.code} · échéance "
+                f"{timezone.localtime(q0.due_date).strftime('%d/%m/%Y %H:%M')}"
+            ),
+            "url": reverse("courses:front_quiz_take", args=[q0.pk]),
+            "percent": avg_progress,
+            "cta": "Continuer →",
+        }
+    elif recent_notifications:
+        n0 = recent_notifications[0]
+        focus = {
+            "kind": "alert",
+            "title": n0.title,
+            "subtitle": n0.message[:120],
+            "url": n0.link or reverse("courses:front_notifications"),
+            "percent": avg_progress,
+            "cta": "Voir →",
+        }
+
+    # Academic journey — jalons réels uniquement
+    journey = []
+    for e in enrollments:
+        if (
+            e.course.status == Course.Status.PUBLISHED
+            and e.course.is_visible
+            and e.course.level == program
+        ):
+            journey.append(
+                {
+                    "label": e.course.code,
+                    "detail": "Module affecté",
+                    "when": e.enrolled_at,
+                }
+            )
+    for a in all_attempts[-6:]:
+        journey.append(
+            {
+                "label": a.quiz.title[:28],
+                "detail": f"Quiz · {a.score}%",
+                "when": a.completed_at,
+            }
+        )
+    for q in upcoming:
+        journey.append(
+            {
+                "label": q.title[:28],
+                "detail": "Échéance",
+                "when": q.due_date,
+            }
+        )
+    journey.sort(key=lambda x: x["when"] or timezone.now())
+    journey = journey[-8:]
+
     return render(
         request,
         "courses/student/dashboard.html",
@@ -602,6 +774,15 @@ def student_dashboard(request):
             "quizzes": quizzes,
             "attempts": attempts,
             "upcoming": upcoming,
+            "resource_total": resource_total,
+            "library_resources": library_resources,
+            "recent_notifications": recent_notifications,
+            "greeting": greeting,
+            "today": timezone.localtime().date(),
+            "contextual_message": contextual_message,
+            "attention_count": attention_count,
+            "focus": focus,
+            "journey": journey,
             "chart_progress": json.dumps(
                 {"labels": progress_labels, "data": progress_values}
             ),
@@ -611,6 +792,51 @@ def student_dashboard(request):
             "chart_pass": json.dumps(
                 {"labels": ["Réussis", "Échoués"], "data": [passed, failed]}
             ),
+        },
+    )
+
+
+@login_required
+@student_required
+def student_resources(request):
+    """Bibliothèque numérique — ressources des modules affectés (données existantes)."""
+    profile = get_profile(request.user)
+    assign_modules_for_student(request.user)
+    program = profile.academic_level
+    enrollments = (
+        Enrollment.objects.filter(student=request.user)
+        .select_related("course")
+        .prefetch_related("course__resources")
+    )
+    q = (request.GET.get("q") or "").strip()
+    type_filter = (request.GET.get("type") or "").strip()
+    items = []
+    for e in enrollments:
+        course = e.course
+        if (
+            course.status != Course.Status.PUBLISHED
+            or not course.is_visible
+            or course.level != program
+        ):
+            continue
+        for r in course.resources.all():
+            if not r.is_available_to_students:
+                continue
+            if (r.target_level or course.level) != program:
+                continue
+            if type_filter and r.resource_type != type_filter:
+                continue
+            if q and q.lower() not in r.title.lower() and q.lower() not in course.code.lower():
+                continue
+            items.append({"resource": r, "course": course})
+    return render(
+        request,
+        "courses/student/resources.html",
+        {
+            "items": items,
+            "q": q,
+            "type_filter": type_filter,
+            "type_choices": Resource.ResourceType.choices,
         },
     )
 
@@ -636,6 +862,106 @@ def student_quizzes(request):
 
 @login_required
 @student_required
+def student_charts(request):
+    """Dashboard Chart.js — stats réelles de l'étudiant."""
+    from datetime import timedelta
+
+    profile = get_profile(request.user)
+    assign_modules_for_student(request.user)
+    program = profile.academic_level
+    enrollments = (
+        Enrollment.objects.filter(student=request.user)
+        .select_related("course", "course__category")
+        .prefetch_related("course__resources", "course__quizzes")
+        .order_by("course__code")
+    )
+    my_courses = [
+        e.course
+        for e in enrollments
+        if e.course.status == Course.Status.PUBLISHED
+        and e.course.is_visible
+        and e.course.level == program
+    ]
+
+    progress_labels, progress_values = [], []
+    total_progress = 0
+    resource_total = 0
+    for course in my_courses:
+        quizzes_c = [q for q in course.quizzes.all() if q.is_published]
+        prog = _module_progress(request.user, course, quizzes_c)
+        progress_labels.append(course.code)
+        progress_values.append(prog["percent"])
+        total_progress += prog["percent"]
+        resource_total += sum(
+            1
+            for r in course.resources.all()
+            if r.is_available_to_students
+            and (r.target_level or course.level) == program
+        )
+    avg_progress = int(total_progress / len(my_courses)) if my_courses else 0
+
+    quizzes = Quiz.objects.filter(
+        is_published=True, course__in=my_courses
+    ).select_related("course")
+    all_attempts = list(
+        QuizAttempt.objects.filter(student=request.user)
+        .select_related("quiz", "quiz__course")
+        .order_by("completed_at")
+    )
+    passed = sum(1 for a in all_attempts if a.passed)
+    failed = sum(1 for a in all_attempts if not a.passed)
+    avg_score = (
+        round(sum(a.score for a in all_attempts) / len(all_attempts), 1)
+        if all_attempts
+        else 0
+    )
+    score_labels = [a.completed_at.strftime("%d/%m") for a in all_attempts[-12:]]
+    score_values = [a.score for a in all_attempts[-12:]]
+
+    days, day_counts = [], []
+    for i in range(13, -1, -1):
+        day = timezone.localdate() - timedelta(days=i)
+        days.append(day.strftime("%d/%m"))
+        day_counts.append(
+            sum(1 for a in all_attempts if a.completed_at.date() == day)
+        )
+
+    upcoming_count = sum(
+        1 for q in quizzes if q.due_date and q.due_date >= timezone.now()
+    )
+    unread = Notification.objects.filter(
+        recipient=request.user, is_read=False
+    ).count()
+
+    return render(
+        request,
+        "courses/student/charts.html",
+        {
+            "profile": profile,
+            "module_count": len(my_courses),
+            "resource_total": resource_total,
+            "avg_progress": avg_progress,
+            "quiz_count": quizzes.count(),
+            "upcoming_count": upcoming_count,
+            "attempt_count": len(all_attempts),
+            "avg_score": avg_score,
+            "unread": unread,
+            "chart_progress": json.dumps(
+                {"labels": progress_labels, "data": progress_values}
+            ),
+            "chart_scores": json.dumps(
+                {"labels": score_labels, "data": score_values}
+            ),
+            "chart_pass": json.dumps(
+                {"labels": ["Réussis", "Échoués"], "data": [passed, failed]}
+            ),
+            "chart_activity": json.dumps({"labels": days, "data": day_counts}),
+        },
+    )
+
+
+@login_required
+@student_required
 def student_results(request):
     attempts = (
         QuizAttempt.objects.filter(student=request.user)
@@ -656,7 +982,9 @@ def back_dashboard(request):
         quiz_count=Count("quizzes", distinct=True),
         res_count=Count("resources", distinct=True),
     )
-    quizzes = Quiz.objects.filter(course__instructor=request.user)
+    quizzes = Quiz.objects.filter(course__instructor=request.user).annotate(
+        q_count=Count("questions")
+    )
     attempts_qs = QuizAttempt.objects.filter(quiz__course__instructor=request.user)
     recent_attempts = attempts_qs.select_related(
         "student", "quiz", "quiz__course"
@@ -681,34 +1009,205 @@ def back_dashboard(request):
         mine.filter(status=Course.Status.ARCHIVED).count(),
     ]
 
+    my_resources = Resource.objects.filter(course__instructor=request.user)
+    visible_courses = mine.filter(
+        status=Course.Status.PUBLISHED, is_visible=True
+    ).count()
+    hidden_courses = mine.count() - visible_courses
+    resources_hidden = my_resources.filter(is_visible=False).count()
+    drafts = status_data[0]
+
+    # Needs your attention — real DB signals only
+    attention_items = []
+    list_url = reverse("courses:back_course_list")
+    if drafts:
+        attention_items.append(
+            {
+                "icon": "📝",
+                "tone": "warning",
+                "title": (
+                    f"{drafts} course{'s' if drafts != 1 else ''} still in draft"
+                ),
+                "detail": "Finish content, then publish when ready",
+                "url": f"{list_url}?status=draft",
+            }
+        )
+    if hidden_courses:
+        attention_items.append(
+            {
+                "icon": "👁",
+                "tone": "info",
+                "title": (
+                    f"{hidden_courses} course{'s' if hidden_courses != 1 else ''} "
+                    "hidden from students"
+                ),
+                "detail": "Not student-accessible (draft, archived, or visibility off)",
+                "url": f"{list_url}?visibility=hidden",
+            }
+        )
+    if resources_hidden:
+        attention_items.append(
+            {
+                "icon": "⚠️",
+                "tone": "warning",
+                "title": (
+                    f"{resources_hidden} resource"
+                    f"{'s' if resources_hidden != 1 else ''} still hidden"
+                ),
+                "detail": "Students cannot see these until you make them visible",
+                "url": reverse("courses:back_resource_library") + "?visibility=hidden",
+            }
+        )
+    week_end = timezone.now() + timedelta(days=7)
+    scheduled_week = my_resources.filter(
+        is_visible=True,
+        scheduled_at__gt=timezone.now(),
+        scheduled_at__lte=week_end,
+    ).count()
+    if scheduled_week:
+        attention_items.append(
+            {
+                "icon": "📅",
+                "tone": "info",
+                "title": (
+                    f"{scheduled_week} resource"
+                    f"{'s' if scheduled_week != 1 else ''} scheduled this week"
+                ),
+                "detail": "Will become visible automatically at the set time",
+                "url": reverse("courses:back_resource_library")
+                + "?visibility=scheduled",
+            }
+        )
+    empty_quizzes = list(quizzes.filter(q_count=0).select_related("course")[:5])
+    for qz in empty_quizzes:
+        attention_items.append(
+            {
+                "icon": "🧠",
+                "tone": "danger",
+                "title": f'Quiz “{qz.title}” has no questions',
+                "detail": f"{qz.course.code} · add questions before publishing",
+                "url": reverse("courses:back_quiz_detail", args=[qz.pk]),
+            }
+        )
+    published_empty = mine.filter(
+        status=Course.Status.PUBLISHED, is_visible=True, res_count=0
+    )[:3]
+    for c in published_empty:
+        attention_items.append(
+            {
+                "icon": "📂",
+                "tone": "info",
+                "title": f'“{c.title}” is published with no resources',
+                "detail": "Students see an empty course",
+                "url": reverse("courses:back_course_detail", args=[c.pk]),
+            }
+        )
+
+    # Activité récente réelle (cours + ressources + quiz)
+    recent_activity = []
+    for c in mine.order_by("-updated_at")[:8]:
+        if c.created_at and (timezone.now() - c.created_at).days < 2:
+            action = "created"
+        elif c.status == Course.Status.PUBLISHED and c.is_visible:
+            action = "published / visible"
+        elif not c.is_visible:
+            action = "hidden"
+        else:
+            action = "updated"
+        recent_activity.append(
+            {
+                "kind": "course",
+                "label": f"Course {c.code}",
+                "detail": f"“{c.title}” — {action}",
+                "when": c.updated_at,
+                "url": reverse("courses:back_course_detail", args=[c.pk]),
+            }
+        )
+    for r in my_resources.select_related("course").order_by("-created_at")[:6]:
+        recent_activity.append(
+            {
+                "kind": "resource",
+                "label": r.title,
+                "detail": f"Resource · {r.course.code} · {r.visibility_label}",
+                "when": r.created_at,
+                "url": reverse("courses:back_course_detail", args=[r.course_id]),
+            }
+        )
+    for qz in quizzes.select_related("course").order_by("-updated_at")[:4]:
+        recent_activity.append(
+            {
+                "kind": "quiz",
+                "label": qz.title,
+                "detail": (
+                    f"Quiz · {qz.course.code} · "
+                    f"{'published' if qz.is_published else 'unpublished'}"
+                ),
+                "when": qz.updated_at,
+                "url": reverse("courses:back_quiz_detail", args=[qz.pk]),
+            }
+        )
+    recent_activity.sort(key=lambda x: x["when"], reverse=True)
+    recent_activity = recent_activity[:10]
+
+    hour = timezone.localtime().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 18:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+    professor_name = (
+        request.user.get_full_name()
+        or request.user.get_username()
+        or "Professor"
+    )
+    if professor_name and " " in professor_name:
+        # Prefer first name for greeting warmth
+        professor_name = professor_name.split()[0]
+
     context = {
+        "greeting": greeting,
+        "professor_name": professor_name,
         "total_courses": mine.count(),
-        "drafts": status_data[0],
+        "drafts": drafts,
         "published": status_data[1],
         "archived": status_data[2],
-        "resources_count": Resource.objects.filter(
-            course__instructor=request.user
-        ).count(),
+        "visible_courses": visible_courses,
+        "hidden_courses": hidden_courses,
+        "resources_count": my_resources.count(),
+        "resources_visible": my_resources.filter(is_visible=True).count(),
+        "resources_hidden": resources_hidden,
         "quizzes_count": quizzes.count(),
         "attempts_count": attempts_qs.count(),
         "students_count": Enrollment.objects.filter(
             course__instructor=request.user
-        ).values("student").distinct().count(),
+        )
+        .values("student")
+        .distinct()
+        .count(),
         "avg_score": round(avg_score, 1),
+        "attention_items": attention_items,
         "recent_courses": mine.select_related("category")[:6],
         "recent_quizzes": quizzes.select_related("course")[:5],
         "recent_attempts": recent_attempts,
+        "recent_activity": recent_activity,
         "chart_modules": json.dumps(
             {"labels": module_labels, "data": module_students}
         ),
         "chart_activity": json.dumps({"labels": days, "data": day_counts}),
         "chart_pass": json.dumps(
-            {"labels": ["Réussis", "Échoués"], "data": [passed, failed]}
+            {"labels": ["Passed", "Failed"], "data": [passed, failed]}
         ),
         "chart_status": json.dumps(
             {
-                "labels": ["Brouillon", "Publié", "Archivé"],
+                "labels": ["Draft", "Published", "Archived"],
                 "data": status_data,
+            }
+        ),
+        "chart_visibility": json.dumps(
+            {
+                "labels": ["Visible", "Hidden"],
+                "data": [visible_courses, hidden_courses],
             }
         ),
     }
@@ -721,9 +1220,60 @@ def back_quizzes(request):
     quizzes = (
         Quiz.objects.filter(course__instructor=request.user)
         .select_related("course")
-        .annotate(attempt_count=Count("attempts"), q_count=Count("questions"))
+        .annotate(
+            attempt_count=Count("attempts", distinct=True),
+            q_count=Count("questions", distinct=True),
+            avg_score=Avg("attempts__score"),
+            total_points=Sum("questions__points"),
+        )
+        .order_by("-updated_at")
     )
-    return render(request, "courses/back/quizzes.html", {"quizzes": quizzes})
+    q = (request.GET.get("q") or "").strip()
+    status = (request.GET.get("status") or "").strip()
+    course_id = (request.GET.get("course") or "").strip()
+    if q:
+        quizzes = quizzes.filter(
+            Q(title__icontains=q)
+            | Q(course__code__icontains=q)
+            | Q(course__title__icontains=q)
+        )
+    if status == "published":
+        quizzes = quizzes.filter(is_published=True)
+    elif status == "draft":
+        quizzes = quizzes.filter(is_published=False)
+    elif status == "empty":
+        quizzes = quizzes.filter(q_count=0)
+    if course_id.isdigit():
+        quizzes = quizzes.filter(course_id=int(course_id))
+
+    quizzes = list(quizzes)
+    all_mine = Quiz.objects.filter(course__instructor=request.user).annotate(
+        q_count=Count("questions"),
+        attempt_count=Count("attempts"),
+    )
+    stats = {
+        "total": all_mine.count(),
+        "published": all_mine.filter(is_published=True).count(),
+        "draft": all_mine.filter(is_published=False).count(),
+        "empty": all_mine.filter(q_count=0).count(),
+        "attempts": QuizAttempt.objects.filter(
+            quiz__course__instructor=request.user
+        ).count(),
+    }
+    courses = Course.objects.filter(instructor=request.user).order_by("code")
+    return render(
+        request,
+        "courses/back/quizzes.html",
+        {
+            "quizzes": quizzes,
+            "stats": stats,
+            "courses": courses,
+            "q": q,
+            "status": status,
+            "course_id": course_id,
+            "unread_notifications": _unread_count(request.user),
+        },
+    )
 
 
 @login_required
@@ -811,12 +1361,30 @@ def back_course_list(request):
             courses = courses.filter(level=level)
         if status:
             courses = courses.filter(status=status)
+    # Filtre visibilité (GET visibility=visible|hidden)
+    visibility = (request.GET.get("visibility") or "").strip()
+    if visibility == "visible":
+        courses = courses.filter(
+            status=Course.Status.PUBLISHED, is_visible=True
+        )
+    elif visibility == "hidden":
+        courses = courses.exclude(
+            status=Course.Status.PUBLISHED, is_visible=True
+        )
+
+    # Needs Attention: courses that have at least one hidden resource
+    resource_filter = (request.GET.get("resource") or "").strip()
+    if resource_filter == "hidden":
+        courses = courses.filter(resources__is_visible=False).distinct()
+
     courses = list(courses)
     stats = {
         "total": len(courses),
         "published": sum(1 for c in courses if c.status == Course.Status.PUBLISHED),
         "draft": sum(1 for c in courses if c.status == Course.Status.DRAFT),
         "archived": sum(1 for c in courses if c.status == Course.Status.ARCHIVED),
+        "visible": sum(1 for c in courses if c.is_student_accessible),
+        "hidden": sum(1 for c in courses if not c.is_student_accessible),
         "students": sum(c.student_count for c in courses),
         "resources": sum(c.res_count for c in courses),
         "quizzes": sum(c.quiz_count for c in courses),
@@ -828,6 +1396,8 @@ def back_course_list(request):
             "courses": courses,
             "form": form,
             "stats": stats,
+            "visibility": visibility,
+            "resource_filter": resource_filter,
             "status_choices": Course.Status.choices,
             "unread_notifications": _unread_count(request.user),
         },
@@ -855,7 +1425,19 @@ def back_course_create(request):
             if course.status == Course.Status.PUBLISHED and not course.published_at:
                 course.published_at = timezone.now()
             course.save()
-            messages.success(request, f"Module « {course.title} » créé avec succès.")
+            newly = _assign_course_to_class(course, notify=True)
+            if course.is_student_accessible:
+                messages.success(
+                    request,
+                    f"Module « {course.title} » créé et affecté à {course.get_level_display()} "
+                    f"({len(newly)} nouvel(le)s inscrit(e)s).",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Module « {course.title} » créé. Publiez-le et rendez-le visible "
+                    f"pour l’affecter aux étudiants de {course.get_level_display()}.",
+                )
             return redirect("courses:back_course_detail", pk=course.pk)
     else:
         form = CourseForm(user=request.user)
@@ -891,6 +1473,7 @@ def back_course_detail(request, pk):
         {
             "course": course,
             "status_choices": Course.Status.choices,
+            "resource_type_choices": Resource.ResourceType.choices,
             "unread_notifications": _unread_count(request.user),
         },
     )
@@ -909,7 +1492,15 @@ def back_course_edit(request, pk):
             if course.status == Course.Status.PUBLISHED and not course.published_at:
                 course.published_at = timezone.now()
             course.save()
-            messages.success(request, "Module mis à jour.")
+            newly = _assign_course_to_class(course, notify=True)
+            if newly:
+                messages.success(
+                    request,
+                    f"Module mis à jour · {len(newly)} étudiant(s) de "
+                    f"{course.get_level_display()} inscrit(s).",
+                )
+            else:
+                messages.success(request, "Module mis à jour.")
             return redirect("courses:back_course_detail", pk=course.pk)
     else:
         form = CourseForm(instance=course, user=request.user)
@@ -948,29 +1539,232 @@ def back_course_status(request, pk):
         if new_status == Course.Status.PUBLISHED and not course.published_at:
             course.published_at = timezone.now()
         course.save(update_fields=["status", "published_at", "updated_at"])
-        # Affecter / notifier les étudiants du même niveau scolaire
-        if new_status == Course.Status.PUBLISHED:
-            from .models import UserProfile
-
-            students = UserProfile.objects.filter(
-                role=UserProfile.Role.STUDENT,
-                academic_level=course.level,
-            ).select_related("user")
-            for sp in students:
-                Enrollment.objects.get_or_create(student=sp.user, course=course)
-                _notify(
-                    sp.user,
-                    f"Module publié — {course.code}",
-                    f"« {course.title} » est disponible pour votre niveau.",
-                    level=Notification.Level.INFO,
-                    link=course.get_absolute_url(),
-                    course=course,
-                )
-        messages.success(
-            request,
-            f"Statut passé à « {course.get_status_display()} ».",
-        )
+        newly = []
+        if course.is_student_accessible:
+            newly = sync_program_enrollments(
+                course, notify=True, notify_callback=_notify_course_assigned
+            )
+        msg = f"Statut passé à « {course.get_status_display()} »."
+        if newly:
+            msg += f" {len(newly)} étudiant(s) de {course.get_level_display()} inscrit(s)."
+        messages.success(request, msg)
     return redirect("courses:back_course_detail", pk=course.pk)
+
+
+@login_required
+@teacher_required
+@require_POST
+def back_course_toggle_visibility(request, pk):
+    course = get_object_or_404(Course, pk=pk, instructor=request.user)
+    if "is_visible" in request.POST:
+        raw = str(request.POST.get("is_visible", "")).lower()
+        course.is_visible = raw in ("1", "true", "on", "yes")
+    else:
+        course.is_visible = not course.is_visible
+    course.save(update_fields=["is_visible", "updated_at"])
+    newly = _assign_course_to_class(course, notify=True)
+
+    payload = {
+        "ok": True,
+        "is_visible": course.is_visible,
+        "student_accessible": course.is_student_accessible,
+        "label": course.visibility_label,
+        "status": course.status,
+        "status_display": course.get_status_display(),
+        "studio_state": course.studio_state,
+        "studio_state_label": course.studio_state_label,
+        "enrolled": len(newly),
+        "message": (
+            f"Course « {course.code} » is now "
+            f"{'visible to students' if course.is_student_accessible else 'hidden from students'}"
+            + (
+                f" · {len(newly)} student(s) enrolled in {course.get_level_display()}."
+                if newly
+                else "."
+            )
+        ),
+    }
+    if _wants_json(request):
+        return JsonResponse(payload)
+    messages.success(request, payload["message"])
+    next_url = request.POST.get("next") or reverse(
+        "courses:back_course_detail", args=[course.pk]
+    )
+    return redirect(next_url)
+
+
+
+def _preview_resource_groups(visible_resources):
+    """Group student-visible resources by chapter for Preview as Student."""
+    groups_map = {}
+    unassigned = []
+    for r in visible_resources:
+        if r.chapter_id and r.chapter:
+            bucket = groups_map.setdefault(
+                r.chapter_id,
+                {
+                    "title": r.chapter.title,
+                    "order": r.chapter.order,
+                    "resources": [],
+                },
+            )
+            bucket["resources"].append(r)
+        else:
+            unassigned.append(r)
+    groups = sorted(groups_map.values(), key=lambda g: (g["order"], g["title"]))
+    return groups, unassigned
+
+
+def _preview_context(course, **extra):
+    back = reverse("courses:back_course_detail", args=[course.pk])
+    ctx = {
+        "preview_back_url": back,
+        "preview_edit_url": reverse("courses:back_course_edit", args=[course.pk]),
+        "preview_builder_url": reverse(
+            "courses:back_course_builder", args=[course.pk]
+        ),
+        "preview_course_url": reverse(
+            "courses:back_course_preview", args=[course.pk]
+        ),
+        "preview_hint": (
+            f"Digital Student Desk view for « {course.code} » — "
+            "only student-visible content is shown."
+        ),
+        "unread_notifications": 0,
+    }
+    ctx.update(extra)
+    return ctx
+
+
+@login_required
+@teacher_required
+def back_course_preview(request, pk):
+    """Preview as Student — same gates/filters students get, Studio chrome escape."""
+    course = get_object_or_404(
+        Course.objects.select_related("category", "instructor").prefetch_related(
+            "resources__chapter", "quizzes", "chapters"
+        ),
+        pk=pk,
+        instructor=request.user,
+    )
+    program = course.level
+    preview_blocked = not course.is_student_accessible
+    if preview_blocked:
+        visible_resources = []
+        published_quizzes = []
+    else:
+        visible_resources = _student_visible_resources(course, program)
+        published_quizzes = list(
+            course.quizzes.filter(is_published=True).order_by("order", "id")
+        )
+    resource_groups, unassigned_resources = _preview_resource_groups(
+        visible_resources
+    )
+    quiz_cards = [{"quiz": q, "attempt": None} for q in published_quizzes]
+    return render(
+        request,
+        "courses/front/detail.html",
+        {
+            **_preview_context(course),
+            "course": course,
+            "related": [],
+            "visible_resources": visible_resources,
+            "resource_groups": resource_groups,
+            "unassigned_resources": unassigned_resources,
+            "published_quizzes": published_quizzes,
+            "quiz_cards": quiz_cards,
+            "enrolled": True,
+            "is_student_view": True,
+            "is_preview": True,
+            "preview_blocked": preview_blocked,
+            "module_progress": None,
+            "layout": "layouts/preview_student.html",
+        },
+    )
+
+
+@login_required
+@teacher_required
+def back_resource_preview(request, pk):
+    """Preview a single resource the way a student would encounter it."""
+    resource = get_object_or_404(
+        Resource.objects.select_related("course", "chapter", "course__category"),
+        pk=pk,
+        course__instructor=request.user,
+    )
+    course = resource.course
+    student_sees = (
+        course.is_student_accessible and resource.is_available_to_students
+    )
+    return render(
+        request,
+        "courses/back/resource_preview.html",
+        {
+            **_preview_context(
+                course,
+                preview_edit_url=reverse(
+                    "courses:back_resource_edit", args=[resource.pk]
+                ),
+                preview_back_url=reverse("courses:back_resource_library"),
+                preview_hint=(
+                    f"Resource preview · « {resource.title} » — "
+                    + (
+                        "visible to students now."
+                        if student_sees
+                        else "currently hidden from students."
+                    )
+                ),
+            ),
+            "resource": resource,
+            "course": course,
+            "student_sees": student_sees,
+            "layout": "layouts/preview_student.html",
+        },
+    )
+
+
+@login_required
+@teacher_required
+def back_quiz_preview(request, pk):
+    """Read-only quiz preview as a student would see the take screen."""
+    quiz = get_object_or_404(
+        Quiz.objects.select_related("course").prefetch_related(
+            "questions__choices"
+        ),
+        pk=pk,
+        course__instructor=request.user,
+    )
+    course = quiz.course
+    questions = list(quiz.questions.all())
+    student_sees = course.is_student_accessible and quiz.is_published
+    return render(
+        request,
+        "courses/front/quiz_take.html",
+        {
+            **_preview_context(
+                course,
+                preview_edit_url=reverse(
+                    "courses:back_quiz_detail", args=[quiz.pk]
+                ),
+                preview_back_url=reverse(
+                    "courses:back_quiz_detail", args=[quiz.pk]
+                ),
+                preview_hint=(
+                    f"Quiz preview · « {quiz.title} » — "
+                    + (
+                        "published for students."
+                        if student_sees
+                        else "not visible to students yet (unpublished or course hidden)."
+                    )
+                ),
+            ),
+            "quiz": quiz,
+            "questions": questions,
+            "is_preview": True,
+            "student_sees": student_sees,
+            "layout": "layouts/preview_student.html",
+        },
+    )
 
 
 @login_required
@@ -985,24 +1779,67 @@ def back_resource_create(request, course_pk):
             if not resource.target_level:
                 resource.target_level = course.level
             resource.save()
-            # Notifier seulement les étudiants du niveau destiné
-            target = resource.target_level or course.level
-            for enr in course.enrollments.select_related("student", "student__profile"):
-                sp = getattr(enr.student, "profile", None)
-                if sp and sp.academic_level == target:
-                    _notify(
-                        enr.student,
-                        f"Nouvelle ressource — {course.code}",
-                        f"« {resource.title} » (niveau {resource.get_target_level_display()}).",
-                        level=Notification.Level.INFO,
-                        link=course.get_absolute_url(),
-                        course=course,
-                    )
+            # Notifier seulement si effectivement visible aux étudiants
+            if resource.is_available_to_students:
+                target = resource.target_level or course.level
+                for enr in course.enrollments.select_related(
+                    "student", "student__profile"
+                ):
+                    sp = getattr(enr.student, "profile", None)
+                    if sp and sp.academic_level == target:
+                        _notify(
+                            enr.student,
+                            f"Nouvelle ressource — {course.code}",
+                            f"« {resource.title} » (niveau {resource.get_target_level_display()}).",
+                            level=Notification.Level.INFO,
+                            link=course.get_absolute_url(),
+                            course=course,
+                        )
+            if _wants_json(request):
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "message": "Resource created successfully.",
+                        "resource": {
+                            "id": resource.pk,
+                            "title": resource.title,
+                            "type": resource.get_resource_type_display(),
+                            "type_key": resource.resource_type,
+                            "icon": resource.type_icon,
+                            "order": resource.order,
+                            "is_visible": resource.is_visible,
+                            "visibility_label": resource.visibility_label,
+                            "is_required": resource.is_required,
+                            "target_level": resource.get_target_level_display(),
+                            "edit_url": reverse(
+                                "courses:back_resource_edit", args=[resource.pk]
+                            ),
+                            "toggle_url": reverse(
+                                "courses:back_resource_toggle_visibility",
+                                args=[resource.pk],
+                            ),
+                            "delete_url": reverse(
+                                "courses:back_resource_delete", args=[resource.pk]
+                            ),
+                            "open_url": (
+                                resource.url
+                                or (resource.file.url if resource.file else "")
+                            ),
+                        },
+                    }
+                )
             messages.success(
                 request,
-                f"Ressource ajoutée pour le niveau {resource.get_target_level_display()}.",
+                f"Resource « {resource.title} » created successfully.",
             )
-            return redirect("courses:back_course_detail", pk=course.pk)
+            next_url = request.POST.get("next") or reverse(
+                "courses:back_course_detail", args=[course.pk]
+            )
+            return redirect(next_url)
+        if _wants_json(request):
+            return JsonResponse(
+                {"ok": False, "errors": form.errors}, status=400
+            )
     else:
         form = ResourceForm(course=course)
     return render(
@@ -1011,9 +1848,47 @@ def back_resource_create(request, course_pk):
         {
             "form": form,
             "course": course,
-            "title": "Ajouter une ressource",
+            "title": "Add resource",
+            "mode": "create",
+            "standalone": False,
+            "unread_notifications": _unread_count(request.user),
         },
     )
+
+
+@login_required
+@teacher_required
+@require_POST
+def back_resource_toggle_visibility(request, pk):
+    resource = get_object_or_404(
+        Resource, pk=pk, course__instructor=request.user
+    )
+    if "is_visible" in request.POST:
+        raw = str(request.POST.get("is_visible", "")).lower()
+        resource.is_visible = raw in ("1", "true", "on", "yes")
+    else:
+        resource.is_visible = not resource.is_visible
+    if resource.is_visible:
+        resource.scheduled_at = None
+    else:
+        resource.scheduled_at = None
+    resource.save(update_fields=["is_visible", "scheduled_at", "updated_at"])
+    payload = {
+        "ok": True,
+        "is_visible": resource.is_visible,
+        "student_accessible": resource.is_available_to_students,
+        "label": resource.visibility_label,
+        "studio_state": resource.studio_state,
+        "studio_state_label": resource.studio_state_label,
+        "message": (
+            f"Resource « {resource.title} » is now "
+            f"{'visible to students' if resource.is_available_to_students else 'hidden from students'}."
+        ),
+    }
+    if _wants_json(request):
+        return JsonResponse(payload)
+    messages.success(request, payload["message"])
+    return redirect("courses:back_course_detail", pk=resource.course_id)
 
 
 @login_required
@@ -1028,8 +1903,11 @@ def back_resource_edit(request, pk):
         )
         if form.is_valid():
             form.save()
-            messages.success(request, "Ressource mise à jour.")
-            return redirect("courses:back_course_detail", pk=resource.course_id)
+            messages.success(request, "Resource updated successfully.")
+            next_url = request.POST.get("next") or reverse(
+                "courses:back_resource_library"
+            )
+            return redirect(next_url)
     else:
         form = ResourceForm(instance=resource, course=resource.course)
     return render(
@@ -1038,8 +1916,11 @@ def back_resource_edit(request, pk):
         {
             "form": form,
             "course": resource.course,
-            "title": f"Modifier — {resource.title}",
+            "title": f"Edit — {resource.title}",
             "resource": resource,
+            "mode": "edit",
+            "standalone": False,
+            "unread_notifications": _unread_count(request.user),
         },
     )
 
@@ -1051,8 +1932,12 @@ def back_resource_delete(request, pk):
         Resource, pk=pk, course__instructor=request.user
     )
     course_pk = resource.course_id
+    title = resource.title
     resource.delete()
-    messages.success(request, "Ressource supprimée.")
+    messages.success(request, f"Resource « {title} » deleted.")
+    next_url = request.POST.get("next")
+    if next_url:
+        return redirect(next_url)
     return redirect("courses:back_course_detail", pk=course_pk)
 
 
@@ -1101,19 +1986,85 @@ def back_quiz_create(request, course_pk):
 @teacher_required
 def back_quiz_detail(request, pk):
     quiz = get_object_or_404(
-        Quiz.objects.prefetch_related("questions__choices", "attempts"),
+        Quiz.objects.select_related("course").prefetch_related(
+            "questions__choices"
+        ),
         pk=pk,
         course__instructor=request.user,
     )
+    attempts_qs = quiz.attempts.select_related("student")
+    attempt_stats = attempts_qs.aggregate(
+        attempt_count=Count("id"),
+        avg_score=Avg("score"),
+        passed_count=Count("id", filter=Q(passed=True)),
+    )
+    q_stats = quiz.questions.aggregate(
+        q_count=Count("id"),
+        total_points=Sum("points"),
+    )
+    quiz.q_count = q_stats["q_count"] or 0
+    quiz.attempt_count = attempt_stats["attempt_count"] or 0
+    avg = attempt_stats["avg_score"] or 0
+    total_pts = q_stats["total_points"] or 0
+    passed_count = attempt_stats["passed_count"] or 0
+    avg_points = round((avg / 100.0) * total_pts, 1) if total_pts else None
+    attempts = list(attempts_qs.order_by("-completed_at")[:50])
     return render(
         request,
         "courses/back/quiz_detail.html",
         {
             "quiz": quiz,
             "course": quiz.course,
+            "attempts": attempts,
+            "avg_score": round(avg, 1) if attempt_stats["avg_score"] is not None else None,
+            "avg_points": avg_points,
+            "total_points": total_pts,
+            "pass_rate": (
+                round((passed_count / quiz.attempt_count) * 100, 1)
+                if quiz.attempt_count
+                else None
+            ),
             "unread_notifications": _unread_count(request.user),
         },
     )
+
+
+@login_required
+@teacher_required
+@require_POST
+def back_quiz_toggle_publish(request, pk):
+    quiz = get_object_or_404(Quiz, pk=pk, course__instructor=request.user)
+    if "is_published" in request.POST:
+        raw = str(request.POST.get("is_published", "")).lower()
+        quiz.is_published = raw in ("1", "true", "on", "yes")
+    else:
+        quiz.is_published = not quiz.is_published
+    quiz.save(update_fields=["is_published", "updated_at"])
+    if quiz.is_published:
+        for enr in quiz.course.enrollments.select_related("student"):
+            _notify(
+                enr.student,
+                f"Quiz published — {quiz.course.code}",
+                f"« {quiz.title} » is now available.",
+                level=Notification.Level.DEADLINE
+                if quiz.due_date
+                else Notification.Level.INFO,
+                link=f"/quiz/{quiz.pk}/",
+                course=quiz.course,
+            )
+    payload = {
+        "ok": True,
+        "is_published": quiz.is_published,
+        "label": "Published" if quiz.is_published else "Draft",
+        "message": (
+            f"Quiz « {quiz.title} » is now "
+            f"{'published' if quiz.is_published else 'unpublished'}."
+        ),
+    }
+    if _wants_json(request):
+        return JsonResponse(payload)
+    messages.success(request, payload["message"])
+    return redirect("courses:back_quiz_detail", pk=quiz.pk)
 
 
 @login_required

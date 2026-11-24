@@ -1,0 +1,196 @@
+/* ─── Study Mode (dark academic night) ─── */
+
+.space-student.theme-study {
+  --desk-bg: #0f172a;
+  --desk-primary: #6366f1;
+  --desk-secondary: #818cf8;
+  --desk-accent: #06b6d4;
+  --desk-text: #e2e8f0;
+  --desk-muted: #94a3b8;
+  --desk-card: #111827;
+  color: var(--desk-text);
+  background: var(--desk-bg);
+}
+
+.space-student.theme-study .app-shell,
+.space-student.theme-study .app-main,
+.space-student.theme-study .app-content {
+  background: transparent;
+}
+
+.space-student.theme-study .app-sidebar {
+  background: linear-gradient(180deg, #020617 0%, #0f172a 55%, #111827 100%);
+}
+
+.space-student.theme-study .app-topbar {
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+.space-student.theme-study .app-page-title { color: #f8fafc; }
+.space-student.theme-study .app-page-sub { color: #94a3b8; }
+
+.space-student.theme-study .desk-search input,
+.space-student.theme-study .desk-top-link,
+.space-student.theme-study .desk-nav-toggle,
+.space-student.theme-study .home-stat,
+.space-student.theme-study .home-desk-panel,
+.space-student.theme-study .home-card,
+.space-student.theme-study .home-activity li,
+.space-student.theme-study .home-course-row,
+.space-student.theme-study .focus-card,
+.space-student.theme-study .academic-card,
+.space-student.theme-study .desk-quiz-card,
+.space-student.theme-study .manual-main,
+.space-student.theme-study .manual-aside,
+.space-student.theme-study .desk-filter {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: var(--desk-text);
+}
+
+.space-student.theme-study .desk-search input {
+  background: #0b1220;
+  color: #e2e8f0;
+}
+.space-student.theme-study .home-course-row:hover,
+.space-student.theme-study .home-activity li {
+  background: #1e293b;
+}
+
+.space-student.theme-study .desk-surface--contained {
+  background:
+    linear-gradient(180deg, rgba(99, 102, 241, 0.12), transparent 35%),
+    linear-gradient(165deg, #1e293b 0%, #0f172a 55%, #111827 100%);
+  box-shadow:
+    0 0 40px rgba(99, 102, 241, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.space-student.theme-study .book-interior,
+.space-student.theme-study .book-page--left,
+.space-student.theme-study .book-page--right {
+  background: #0b1220;
+  color: #e2e8f0;
+}
+.space-student.theme-study .book-stat,
+.space-student.theme-study .book-day-list li {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+.space-student.theme-study .book-greeting { color: #f8fafc; }
+.space-student.theme-study .book.is-open {
+  filter: drop-shadow(0 0 24px rgba(99, 102, 241, 0.25));
+}
+
+.space-student.theme-study .living-bg .b1 { background: #6366f1; opacity: 0.28; }
+.space-student.theme-study .living-bg .b2 { background: #06b6d4; opacity: 0.2; }
+.space-student.theme-study .living-bg .b3 { background: #4f46e5; opacity: 0.18; }
+
+.space-student.theme-study .prop-lamp .shade {
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.45);
+}
+
+.theme-toggle {
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--desk-muted, #64748b);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.space-student.theme-study .theme-toggle,
+.space-teacher.theme-study .theme-toggle, .space-admin.theme-study .theme-toggle {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}
+
+/* Academic Studio — Study Mode */
+.space-teacher.theme-study, .space-admin.theme-study {
+  --studio-bg: #0f172a;
+  --studio-text: #e2e8f0;
+  --studio-muted: #94a3b8;
+  --studio-card: #111827;
+  color: var(--studio-text);
+  background: var(--studio-bg);
+}
+.space-teacher.theme-study .app-shell, .space-admin.theme-study .app-shell,
+.space-teacher.theme-study .app-main, .space-admin.theme-study .app-main,
+.space-teacher.theme-study .app-content, .space-admin.theme-study .app-content {
+  background: transparent;
+}
+.space-teacher.theme-study .app-sidebar, .space-admin.theme-study .app-sidebar {
+  background: linear-gradient(180deg, #020617 0%, #0f172a 55%, #111827 100%);
+}
+.space-teacher.theme-study .app-topbar, .space-admin.theme-study .app-topbar {
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+.space-teacher.theme-study .app-page-title, .space-admin.theme-study .app-page-title,
+.space-teacher.theme-study .studio-greeting, .space-admin.theme-study .studio-greeting {
+  color: #f8fafc;
+}
+.space-teacher.theme-study .app-page-sub, .space-admin.theme-study .app-page-sub,
+.space-teacher.theme-study .studio-lead, .space-admin.theme-study .studio-lead {
+  color: #94a3b8;
+}
+.space-teacher.theme-study .studio-kpi, .space-admin.theme-study .studio-kpi,
+.space-teacher.theme-study .studio-panel, .space-admin.theme-study .studio-panel,
+.space-teacher.theme-study .studio-nav-toggle, .space-admin.theme-study .studio-nav-toggle {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: var(--studio-text);
+}
+.space-teacher.theme-study .studio-kpi-value, .space-admin.theme-study .studio-kpi-value { color: #f8fafc; }
+.space-teacher.theme-study .studio-attention, .space-admin.theme-study .studio-attention {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), #111827);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+.space-teacher.theme-study .studio-attention-list a, .space-admin.theme-study .studio-attention-list a,
+.space-teacher.theme-study .studio-activity li a, .space-admin.theme-study .studio-activity li a {
+  background: #0b1220;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .studio-activity li a:hover, .space-admin.theme-study .studio-activity li a:hover {
+  background: #1e293b;
+}
+.space-teacher.theme-study .living-bg .b1, .space-admin.theme-study .living-bg .b1 { background: #6366f1; opacity: 0.28; }
+.space-teacher.theme-study .living-bg .b2, .space-admin.theme-study .living-bg .b2 { background: #06b6d4; opacity: 0.2; }
+.space-teacher.theme-study .living-bg .b3, .space-admin.theme-study .living-bg .b3 { background: #4f46e5; opacity: 0.18; }
+.space-teacher.theme-study .dash-card, .space-admin.theme-study .dash-card {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .app-messages .alert, .space-admin.theme-study .app-messages .alert {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .nav-section-label, .space-admin.theme-study .nav-section-label {
+  color: #64748b;
+}
+.space-teacher.theme-study .app-side-nav a, .space-admin.theme-study .app-side-nav a {
+  color: #cbd5e1;
+}
+.space-teacher.theme-study .app-side-nav a.active, .space-admin.theme-study .app-side-nav a.active,
+.space-teacher.theme-study .app-side-nav a:hover, .space-admin.theme-study .app-side-nav a:hover {
+  background: rgba(99, 102, 241, 0.18);
+  color: #f8fafc;
+}
+.space-teacher.theme-study .chip, .space-admin.theme-study .chip {
+  background: #0b1220;
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .side-divider, .space-admin.theme-study .side-divider {
+  background: rgba(148, 163, 184, 0.12);
+}

@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -30,6 +31,8 @@ from .models import (
     QuizAttempt,
     Resource,
     UserProfile,
+    make_course_available_to_program,
+    sync_program_enrollments,
 )
 from .programs import PROGRAM_GROUPS, dept_levels_by_category_id
 from .roles import admin_required
@@ -85,11 +88,59 @@ def admin_dashboard(request):
         "student", "quiz", "quiz__course"
     )[:8]
 
+    hour = timezone.localtime().hour
+    if hour < 12:
+        greeting = "Good morning"
+    elif hour < 18:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+
+    attention_items = []
+    drafts = status_counts.get(Course.Status.DRAFT, 0)
+    if drafts:
+        attention_items.append(
+            {
+                "title": f"{drafts} draft course{'s' if drafts != 1 else ''}",
+                "detail": "Review and publish when ready",
+                "url": reverse("courses:admin_courses"),
+                "icon": "📝",
+                "tone": "warn",
+            }
+        )
+    empty_quizzes = (
+        Quiz.objects.annotate(qn=Count("questions")).filter(qn=0).count()
+    )
+    if empty_quizzes:
+        attention_items.append(
+            {
+                "title": f"{empty_quizzes} quiz{'zes' if empty_quizzes != 1 else ''} with no questions",
+                "detail": "Students cannot take empty quizzes",
+                "url": reverse("courses:admin_quizzes"),
+                "icon": "❓",
+                "tone": "warn",
+            }
+        )
+    inactive = User.objects.filter(is_active=False).count()
+    if inactive:
+        attention_items.append(
+            {
+                "title": f"{inactive} inactive account{'s' if inactive != 1 else ''}",
+                "detail": "Review deactivated users",
+                "url": reverse("courses:admin_users"),
+                "icon": "👤",
+                "tone": "info",
+            }
+        )
+
     context = {
+        "greeting": greeting,
+        "attention_items": attention_items,
         "kpi": {
             "users": User.objects.count(),
             "courses": Course.objects.count(),
             "published": status_counts.get("published", 0),
+            "drafts": drafts,
             "quizzes": Quiz.objects.count(),
             "enrollments": Enrollment.objects.count(),
             "attempts": attempts.count(),
@@ -291,7 +342,15 @@ def admin_course_create(request):
             if course.status == Course.Status.PUBLISHED and not course.published_at:
                 course.published_at = timezone.now()
             course.save()
-            messages.success(request, f"Module « {course.title} » créé.")
+            newly = make_course_available_to_program(course)
+            if course.is_student_accessible:
+                messages.success(
+                    request,
+                    f"Module « {course.title} » créé · {len(newly)} élève(s) "
+                    f"de {course.get_level_display()} inscrit(s).",
+                )
+            else:
+                messages.success(request, f"Module « {course.title} » créé.")
             return redirect("courses:admin_courses")
     else:
         form = CourseForm(user=request.user, include_instructor=True)
@@ -327,7 +386,14 @@ def admin_course_edit(request, pk):
             if course.status == Course.Status.PUBLISHED and not course.published_at:
                 course.published_at = timezone.now()
             course.save()
-            messages.success(request, f"Module « {course.code} » mis à jour.")
+            newly = make_course_available_to_program(course)
+            if newly:
+                messages.success(
+                    request,
+                    f"Module « {course.code} » mis à jour · {len(newly)} élève(s) inscrit(s).",
+                )
+            else:
+                messages.success(request, f"Module « {course.code} » mis à jour.")
             return redirect("courses:admin_courses")
     else:
         form = CourseForm(
@@ -370,7 +436,13 @@ def admin_course_status(request, pk):
         if status == Course.Status.PUBLISHED and not course.published_at:
             course.published_at = timezone.now()
         course.save()
-        messages.success(request, f"{course.code} → {course.get_status_display()}")
+        newly = []
+        if course.is_student_accessible:
+            newly = sync_program_enrollments(course)
+        msg = f"{course.code} → {course.get_status_display()}"
+        if newly:
+            msg += f" · {len(newly)} élève(s) de {course.get_level_display()} inscrit(s)"
+        messages.success(request, msg)
     return redirect("courses:admin_courses")
 
 

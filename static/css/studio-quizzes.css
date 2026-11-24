@@ -1,0 +1,262 @@
+/* Academic Studio — Quiz Center */
+
+.qz-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+.qz-stat {
+  background: var(--studio-card, #fff);
+  border: 1px solid rgba(30, 41, 59, 0.06);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+.qz-stat span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--studio-muted, #64748b);
+}
+.qz-stat strong {
+  font-family: var(--studio-display, Georgia, serif);
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.qz-toolbar {
+  display: grid;
+  grid-template-columns: 1.4fr auto auto;
+  gap: 0.65rem;
+  align-items: center;
+  background: var(--studio-card, #fff);
+  border: 1px solid rgba(30, 41, 59, 0.06);
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.15rem;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+.qz-toolbar .form-control { width: 100%; margin: 0; }
+.qz-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.qz-chip {
+  border: 1px solid rgba(30, 41, 59, 0.12);
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.qz-chip.is-on {
+  background: linear-gradient(135deg, #5b5ce2, #06b6d4);
+  border-color: transparent;
+  color: #fff;
+}
+
+.qz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.qz-card {
+  background: var(--studio-card, #fff);
+  border: 1px solid rgba(30, 41, 59, 0.07);
+  border-radius: 18px;
+  padding: 1.15rem 1.2rem;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.qz-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(91, 92, 226, 0.12);
+}
+.qz-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.qz-card h3 {
+  margin: 0;
+  font-family: var(--studio-display, Georgia, serif);
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+.qz-card h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.qz-card h3 a:hover { color: var(--studio-primary, #5b5ce2); }
+.qz-card-meta {
+  font-size: 0.82rem;
+  color: var(--studio-muted, #64748b);
+}
+.qz-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+.qz-metric {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 0.45rem 0.5rem;
+  text-align: center;
+}
+.qz-metric span {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--studio-muted, #64748b);
+}
+.qz-metric strong {
+  font-size: 0.95rem;
+  color: var(--studio-text, #1e293b);
+}
+.qz-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.qz-detail-hero {
+  background: var(--studio-card, #fff);
+  border: 1px solid rgba(30, 41, 59, 0.06);
+  border-radius: 18px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  margin-bottom: 1.15rem;
+}
+.qz-detail-hero h2 {
+  margin: 0.25rem 0 0.4rem;
+  font-family: var(--studio-display, Georgia, serif);
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  letter-spacing: -0.02em;
+}
+.qz-detail-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0 0;
+}
+.qz-detail-kpi {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+}
+.qz-detail-kpi span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--studio-muted, #64748b);
+}
+.qz-detail-kpi strong {
+  font-size: 1.25rem;
+  font-family: var(--studio-display, Georgia, serif);
+}
+
+.qz-panel {
+  background: var(--studio-card, #fff);
+  border: 1px solid rgba(30, 41, 59, 0.06);
+  border-radius: 16px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  margin-bottom: 1rem;
+}
+.qz-panel h3 {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+}
+.qz-question-card {
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.65rem;
+  background: #fff;
+}
+.qz-question-card h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+}
+.qz-choices {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.qz-choices li.is-correct {
+  color: #047857;
+  font-weight: 650;
+}
+
+.qz-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.qz-tab {
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #475569;
+  cursor: pointer;
+  text-decoration: none;
+}
+.qz-tab.is-on {
+  background: #5b5ce2;
+  border-color: transparent;
+  color: #fff;
+}
+.qz-section[hidden] { display: none !important; }
+
+@media (max-width: 1000px) {
+  .qz-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .qz-detail-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .qz-toolbar { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .qz-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qz-card { transition: none; }
+  .qz-card:hover { transform: none; }
+}
+
+.space-teacher.theme-study .qz-stat, .space-admin.theme-study .qz-stat,
+.space-teacher.theme-study .qz-toolbar, .space-admin.theme-study .qz-toolbar,
+.space-teacher.theme-study .qz-card, .space-admin.theme-study .qz-card,
+.space-teacher.theme-study .qz-detail-hero, .space-admin.theme-study .qz-detail-hero,
+.space-teacher.theme-study .qz-panel, .space-admin.theme-study .qz-panel,
+.space-teacher.theme-study .qz-question-card, .space-admin.theme-study .qz-question-card {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .qz-metric, .space-admin.theme-study .qz-metric,
+.space-teacher.theme-study .qz-detail-kpi, .space-admin.theme-study .qz-detail-kpi,
+.space-teacher.theme-study .qz-chip, .space-admin.theme-study .qz-chip,
+.space-teacher.theme-study .qz-tab, .space-admin.theme-study .qz-tab {
+  background: #0b1220;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}

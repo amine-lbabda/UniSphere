@@ -1,43 +1,60 @@
 {% extends "layouts/student.html" %}
 {% block title %}Mes modules — UniSphere{% endblock %}
-{% block page_title %}Mes modules{% endblock %}
-{% block page_sub %}
-  Uniquement les modules <strong>publiés</strong> pour votre parcours
-  {% if user_profile %}· {{ user_profile.get_academic_level_display }}{% endif %}
-  · {{ total }} visible{{ total|pluralize }}
-{% endblock %}
+{% block page_title %}Courses{% endblock %}
+{% block page_sub %}Modules publiés{% if user_profile %} · {{ user_profile.get_academic_level_display }}{% endif %} · {{ total }} visible{{ total|pluralize }}{% endblock %}
 
 {% block content %}
-<form method="get" class="filter-bar reveal" style="grid-template-columns:1.6fr 1fr auto;">
-  {{ form.q }}
-  {{ form.category }}
-  <button type="submit" class="btn btn-primary">Filtrer</button>
-</form>
+<div class="academic-page">
+  <div class="academic-page-head reveal-up">
+    <div>
+      <h2>Academic Course Cards</h2>
+      <p>Ouvrez un module pour entrer dans le manuel académique.</p>
+    </div>
+    <a href="{% url 'courses:student_dashboard' %}" class="desk-btn desk-btn-ghost">← Mon bureau</a>
+  </div>
 
-{% if courses %}
-<div class="course-grid">
-  {% for course in courses %}
-  <a href="{{ course.get_absolute_url }}" class="course-card">
-    <div class="course-cover" {% if not course.cover %}style="background:linear-gradient(135deg, {{ course.category.color|default:'#3b5bdb' }}, #22b8cf);"{% endif %}>
-      {% if course.cover %}<img src="{{ course.cover.url }}" alt="">{% else %}<div class="course-cover-pattern"></div>{% endif %}
-      <span class="cover-code">{{ course.code }}</span>
-    </div>
-    <div class="course-body">
-      <div class="course-meta">
-        <span class="chip">{{ course.get_level_display }}</span>
-        {% if course.category %}<span class="chip chip-amber">{{ course.category.name }}</span>{% endif %}
+  <form method="get" class="desk-filter reveal-up">
+    {{ form.q }}
+    {{ form.category }}
+    <button type="submit" class="desk-btn desk-btn-primary">Filtrer</button>
+  </form>
+
+  {% if catalog_cards %}
+  <div class="academic-grid">
+    {% for item in catalog_cards %}
+    <a href="{{ item.course.get_absolute_url }}" class="academic-card reveal-up progress-animate">
+      <div class="academic-card-top" style="background:linear-gradient(135deg, {{ item.course.category.color|default:'#5b5ce2' }}, #06b6d4);">
+        <div class="academic-card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>
+          </svg>
+        </div>
       </div>
-      <h3>{{ course.title }}</h3>
-      <p class="excerpt">{{ course.short_description|default:course.description|truncatewords:18 }}</p>
-      <div class="course-footer">
-        <span>{{ course.instructor.get_full_name|default:course.instructor.username }}</span>
-        <span>{{ course.duration_hours }} h</span>
+      <div class="academic-card-body">
+        <h3>{{ item.course.title }}</h3>
+        <div class="academic-card-meta">
+          {{ item.course.instructor.get_full_name|default:item.course.instructor.username }}
+          · {{ item.course.code }}
+          · {{ item.course.get_level_display }}
+        </div>
+        <p class="academic-card-excerpt">{{ item.course.short_description|default:item.course.description|truncatewords:16 }}</p>
+        <div class="academic-card-progress">
+          <header>
+            <span>{{ item.progress.label }}</span>
+            <span>{{ item.progress.percent }}%</span>
+          </header>
+          <div class="track"><div class="fill" data-width="{{ item.progress.percent }}"></div></div>
+        </div>
+        <div class="academic-card-foot">
+          <span>{{ item.res_count }} ressource{{ item.res_count|pluralize }}</span>
+          <span class="academic-card-cta">Open course →</span>
+        </div>
       </div>
-    </div>
-  </a>
-  {% endfor %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><p>Aucun module pour votre niveau.</p></div>
+  {% endif %}
 </div>
-{% else %}
-<div class="empty-state"><p>Aucun module pour votre niveau.</p></div>
-{% endif %}
 {% endblock %}

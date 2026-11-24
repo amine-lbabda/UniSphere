@@ -33,6 +33,7 @@ class CourseForm(forms.ModelForm):
             "category",
             "cover",
             "status",
+            "is_visible",
             "level",
             "duration_hours",
             "prerequisites",
@@ -58,6 +59,10 @@ class CourseForm(forms.ModelForm):
             "category": "Département",
             "level": "Niveau destiné",
             "prerequisites": "Prérequis (texte libre)",
+            "is_visible": "Visible pour les étudiants",
+        }
+        help_texts = {
+            "is_visible": "Décochez pour masquer le module aux étudiants (même s’il est publié).",
         }
 
     def __init__(self, *args, **kwargs):
@@ -103,9 +108,12 @@ class CourseForm(forms.ModelForm):
         self.fields["level"].choices = [("", "Choisir d’abord un département")] + level_choices
         self.fields["level"].required = True
         self.fields["level"].help_text = (
-            "Les niveaux proposés dépendent du département choisi."
+            "Tous les étudiants de ce parcours verront le module dès qu’il est visible."
         )
         self.fields["level"].widget.attrs["id"] = "id_level"
+        # Nouveau module : publié par défaut pour que la classe cible le voie immédiatement
+        if not self.instance.pk and "status" not in self.data:
+            self.fields["status"].initial = Course.Status.PUBLISHED
         self.fields["prerequisites"].required = False
         self.fields["prerequisites"].help_text = (
             "Indiquez librement ce que ce module exige — pas de liste fermée."
@@ -160,28 +168,46 @@ class ResourceForm(forms.ModelForm):
             "target_level",
             "order",
             "is_required",
+            "is_visible",
+            "scheduled_at",
         ]
         widgets = {
-            "title": forms.TextInput(attrs={"placeholder": "Titre de la ressource"}),
+            "title": forms.TextInput(attrs={"placeholder": "Resource title"}),
             "description": forms.Textarea(attrs={"rows": 3}),
             "url": forms.URLInput(attrs={"placeholder": "https://..."}),
             "order": forms.NumberInput(attrs={"min": 0}),
             "target_level": ProgramSelect(),
+            "scheduled_at": forms.DateTimeInput(
+                attrs={"type": "datetime-local"},
+                format="%Y-%m-%dT%H:%M",
+            ),
         }
         labels = {
-            "target_level": "Niveau destiné (étudiants)",
+            "target_level": "Target programme",
+            "is_visible": "Visible to students",
+            "scheduled_at": "Scheduled publication",
         }
 
     def __init__(self, *args, **kwargs):
         course = kwargs.pop("course", None)
         include_course = kwargs.pop("include_course", False)
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["target_level"].choices = PROGRAM_GROUPS
         self.fields["target_level"].required = True
+        self.fields["scheduled_at"].required = False
+        self.fields["scheduled_at"].input_formats = [
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ]
         if include_course:
+            qs = Course.objects.select_related("instructor").order_by("code")
+            if user is not None:
+                qs = qs.filter(instructor=user)
             self.fields["course"] = forms.ModelChoiceField(
-                label="Module",
-                queryset=Course.objects.select_related("instructor").order_by("code"),
+                label="Course",
+                queryset=qs,
                 required=True,
                 widget=forms.Select(attrs={"class": "form-control"}),
             )
@@ -193,8 +219,16 @@ class ResourceForm(forms.ModelForm):
             self.initial["target_level"] = course.level
         elif self.instance and self.instance.pk and not self.instance.target_level and course:
             self.initial["target_level"] = course.level
+        if self.instance and self.instance.pk and self.instance.scheduled_at:
+            from django.utils import timezone as dj_tz
+
+            local = dj_tz.localtime(self.instance.scheduled_at)
+            self.initial["scheduled_at"] = local.strftime("%Y-%m-%dT%H:%M")
+            self.fields["scheduled_at"].widget.attrs["value"] = self.initial[
+                "scheduled_at"
+            ]
         for name, field in self.fields.items():
-            if name == "is_required":
+            if name in ("is_required", "is_visible"):
                 field.widget.attrs["class"] = "form-check-input"
             else:
                 css = field.widget.attrs.get("class", "")
@@ -206,19 +240,36 @@ class ResourceForm(forms.ModelForm):
         file = cleaned.get("file")
         url = cleaned.get("url")
         if rtype == Resource.ResourceType.LINK and not url:
-            self.add_error("url", "Une URL est requise pour un lien.")
+            self.add_error("url", "A URL is required for a link.")
         if rtype in (
             Resource.ResourceType.PDF,
             Resource.ResourceType.DOCUMENT,
             Resource.ResourceType.VIDEO,
+            Resource.ResourceType.PRESENTATION,
         ) and not file and not (self.instance and self.instance.file):
             if not url:
                 self.add_error(
                     "file",
-                    "Ajoutez un fichier ou une URL pour cette ressource.",
+                    "Add a file or a URL for this resource.",
                 )
         if not cleaned.get("target_level"):
-            self.add_error("target_level", "Indiquez le niveau destiné.")
+            self.add_error("target_level", "Choose the target programme.")
+        # Visibility mode from Studio UI radios
+        mode = (self.data.get("publish_mode") or "").strip()
+        scheduled_at = cleaned.get("scheduled_at")
+        if mode == "visible":
+            cleaned["is_visible"] = True
+            cleaned["scheduled_at"] = None
+        elif mode == "hidden":
+            cleaned["is_visible"] = False
+            cleaned["scheduled_at"] = None
+        elif mode == "scheduled":
+            cleaned["is_visible"] = True
+            if not scheduled_at:
+                self.add_error(
+                    "scheduled_at",
+                    "Choose a date and time for scheduled publication.",
+                )
         return cleaned
 
 
@@ -368,13 +419,6 @@ class StudentRegistrationForm(UserCreationForm):
         ),
         help_text="Obligatoire : adresse institutionnelle …@esprit.tn",
     )
-    student_id = forms.CharField(
-        label="Matricule",
-        required=False,
-        widget=forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "Ex. ESP-2024-001"}
-        ),
-    )
     phone = forms.CharField(
         label="Téléphone",
         required=False,
@@ -454,7 +498,6 @@ class StudentRegistrationForm(UserCreationForm):
             profile, _ = UserProfile.objects.get_or_create(user=user)
             profile.role = UserProfile.Role.STUDENT
             profile.academic_level = self.cleaned_data["academic_level"]
-            profile.student_id = self.cleaned_data.get("student_id", "")
             profile.phone = self.cleaned_data.get("phone", "")
             if self.cleaned_data.get("photo"):
                 profile.photo = self.cleaned_data["photo"]

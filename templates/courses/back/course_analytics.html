@@ -1,0 +1,199 @@
+{% extends "layouts/teacher.html" %}
+{% load static %}
+{% block title %}Analytics — {{ course.title }}{% endblock %}
+{% block page_title %}Course Analytics{% endblock %}
+{% block page_sub %}{{ course.code }} · real metrics from UniSphere data{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_course_detail' course.pk %}" class="btn btn-ghost btn-sm">← Course</a>
+<a href="{% url 'courses:back_course_preview' course.pk %}" class="btn btn-secondary btn-sm">Preview as student</a>
+{% endblock %}
+
+{% block teacher_css %}
+<link rel="stylesheet" href="{% static 'css/studio-analytics.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="an-hero reveal">
+  <p class="studio-eyebrow">Academic Studio · Monitor</p>
+  <h2>{{ course.title }}</h2>
+  <p>
+    {{ course.get_status_display }} · {{ course.studio_state_label }}
+    · {{ course.get_level_display }}
+    {% if course.category %} · {{ course.category.name }}{% endif %}
+  </p>
+</header>
+
+<section class="an-kpis" aria-label="Course metrics">
+  <article class="an-kpi reveal">
+    <span>Students</span>
+    <strong data-count="{{ student_count }}">0</strong>
+  </article>
+  <article class="an-kpi reveal">
+    <span>Resources</span>
+    <strong data-count="{{ resources_total }}">0</strong>
+    <small>{{ resources_available }} visible to students</small>
+  </article>
+  <article class="an-kpi reveal">
+    <span>Average progress</span>
+    <strong>{% if avg_progress != None %}{{ avg_progress }}%{% else %}—{% endif %}</strong>
+    <small>Across enrolled students</small>
+  </article>
+  <article class="an-kpi reveal">
+    <span>Quiz participation</span>
+    <strong>{% if quiz_participation != None %}{{ quiz_participation }}%{% else %}—{% endif %}</strong>
+    <small>Students with ≥1 attempt</small>
+  </article>
+  <article class="an-kpi reveal">
+    <span>Quiz attempts</span>
+    <strong data-count="{{ attempts_count }}">0</strong>
+  </article>
+  <article class="an-kpi reveal">
+    <span>Average quiz score</span>
+    <strong>{% if avg_score != None %}{{ avg_score }}%{% else %}—{% endif %}</strong>
+  </article>
+</section>
+
+<div class="an-grid">
+  <section class="an-panel an-span-8 reveal">
+    <h3>Quiz activity (14 days)</h3>
+    <div class="chart-wrap"><canvas id="chartActivity" aria-label="Quiz attempts over 14 days"></canvas></div>
+  </section>
+  <section class="an-panel an-span-4 reveal">
+    <h3>Pass / fail</h3>
+    <div class="chart-wrap"><canvas id="chartPass" aria-label="Pass and fail doughnut"></canvas></div>
+  </section>
+
+  <section class="an-panel an-span-6 reveal">
+    <h3>Average score by quiz</h3>
+    <div class="chart-wrap"><canvas id="chartQuizScores" aria-label="Average scores by quiz"></canvas></div>
+  </section>
+  <section class="an-panel an-span-6 reveal">
+    <h3>Attempts by quiz</h3>
+    <div class="chart-wrap"><canvas id="chartQuizAttempts" aria-label="Attempts by quiz"></canvas></div>
+  </section>
+
+  <section class="an-panel an-span-4 reveal">
+    <h3>Score distribution</h3>
+    <div class="chart-wrap"><canvas id="chartBuckets" aria-label="Score distribution"></canvas></div>
+  </section>
+
+  <section class="an-panel an-span-8 reveal">
+    <h3>Resource availability by chapter</h3>
+    <p class="an-note">
+      Shows how many resources in each chapter are currently available to students
+      (visible + not scheduled in the future). View/download tracking is not enabled in this project.
+    </p>
+    {% if chapter_activity %}
+    <div class="an-bar-list">
+      {% for row in chapter_activity %}
+      <div class="an-bar-row">
+        <div class="an-bar-label">
+          <strong>{{ row.title }}</strong>
+          <span>{{ row.available }}/{{ row.total }} · {{ row.percent }}%</span>
+        </div>
+        <div class="an-bar-track" aria-hidden="true"><i style="width:{{ row.percent }}%"></i></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="studio-empty-inline">No resources in this course yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="an-panel an-span-6 reveal">
+    <h3>Quiz breakdown</h3>
+    {% if quiz_rows %}
+    <table class="an-table">
+      <thead>
+        <tr>
+          <th>Quiz</th>
+          <th>Attempts</th>
+          <th>Avg</th>
+          <th>Participation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in quiz_rows %}
+        <tr>
+          <td>
+            <a href="{% url 'courses:back_quiz_detail' row.quiz.pk %}" style="font-weight:650;color:inherit;text-decoration:none;">
+              {{ row.quiz.title }}
+            </a>
+            <div style="font-size:0.75rem;color:var(--studio-muted);">
+              {% if row.published %}Published{% else %}Draft{% endif %} · {{ row.questions }} q
+            </div>
+          </td>
+          <td>{{ row.attempts }}</td>
+          <td>{% if row.avg_score != None %}{{ row.avg_score }}%{% else %}—{% endif %}</td>
+          <td>{% if row.participation != None %}{{ row.participation }}%{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="studio-empty-inline">No quizzes yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="an-panel an-span-6 reveal">
+    <h3>Student progress</h3>
+    <p class="an-note">Progress uses the same formula as the Digital Student Desk (resources + passed quizzes).</p>
+    {% if student_rows %}
+    <table class="an-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Progress</th>
+          <th>Quizzes</th>
+          <th>Last quiz activity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in student_rows %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>
+            <strong>{{ row.progress }}%</strong>
+            <div style="font-size:0.72rem;color:var(--studio-muted);">{{ row.label }}</div>
+          </td>
+          <td>{{ row.quizzes_passed }}/{{ row.quiz_count }}</td>
+          <td>{% if row.last_activity %}{{ row.last_activity|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="studio-empty-inline">No enrolled students yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="an-panel an-span-12 reveal">
+    <h3>Resource snapshot</h3>
+    <div class="an-kpis" style="margin:0;">
+      <div class="an-kpi" style="box-shadow:none;"><span>Available</span><strong>{{ resources_available }}</strong></div>
+      <div class="an-kpi" style="box-shadow:none;"><span>Hidden</span><strong>{{ resources_hidden }}</strong></div>
+      <div class="an-kpi" style="box-shadow:none;"><span>Scheduled</span><strong>{{ resources_scheduled }}</strong></div>
+      <div class="an-kpi" style="box-shadow:none;"><span>Quizzes published</span><strong>{{ quizzes_published }}/{{ quizzes_total }}</strong></div>
+    </div>
+  </section>
+</div>
+
+<script id="raw-activity" type="application/json">{{ chart_activity|safe }}</script>
+<script id="raw-pass" type="application/json">{{ chart_pass|safe }}</script>
+<script id="raw-quiz-scores" type="application/json">{{ chart_quiz_scores|safe }}</script>
+<script id="raw-quiz-attempts" type="application/json">{{ chart_quiz_attempts|safe }}</script>
+<script id="raw-buckets" type="application/json">{{ chart_score_buckets|safe }}</script>
+{% endblock %}
+
+{% block teacher_js %}
+<script src="{% static 'js/charts.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  UniCharts.line("chartActivity", "raw-activity", { label: "Attempts", color: "#06b6d4", fill: "rgba(6,182,212,0.12)" });
+  UniCharts.doughnut("chartPass", "raw-pass");
+  UniCharts.bar("chartQuizScores", "raw-quiz-scores", { label: "Avg %", color: "rgba(91,92,226,0.85)", max: 100 });
+  UniCharts.bar("chartQuizAttempts", "raw-quiz-attempts", { label: "Attempts", color: "rgba(16,185,129,0.8)" });
+  UniCharts.doughnut("chartBuckets", "raw-buckets");
+});
+</script>
+{% endblock %}

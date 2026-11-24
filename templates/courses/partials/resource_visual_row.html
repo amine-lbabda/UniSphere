@@ -1,0 +1,19 @@
+<div class="resource-visual">
+  <div class="resource-visual-ico {{ r.resource_type }}" aria-hidden="true">
+    {% if r.resource_type == "pdf" %}PDF
+    {% elif r.resource_type == "video" %}▶
+    {% elif r.resource_type == "link" %}↗
+    {% else %}DOC{% endif %}
+  </div>
+  <div class="resource-visual-body">
+    <strong>{{ r.title }}{% if r.is_required %} · Obligatoire{% endif %}</strong>
+    <small>{{ r.get_resource_type_display }}{% if r.description %} — {{ r.description|truncatewords:14 }}{% endif %}</small>
+  </div>
+  <div class="resource-visual-actions">
+    {% if r.url %}
+    <a href="{{ r.url }}" target="_blank" rel="noopener" class="desk-btn desk-btn-ghost">Ouvrir</a>
+    {% elif r.file %}
+    <a href="{{ r.file.url }}" target="_blank" class="desk-btn desk-btn-ghost">Télécharger</a>
+    {% endif %}
+  </div>
+</div>
