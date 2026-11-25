@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Modules — UniSphere{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2>{% if locked_to_level %}Mes modules{% else %}Catalogue des modules{% endif %}</h2>
+        <p>
+          {{ total }} module{{ total|pluralize }}
+          {% if locked_to_level and user_profile %}
+          · niveau {{ user_profile.get_academic_level_display }} (affectation automatique)
+          {% else %}
+          — recherchez et filtrez.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <form method="get" class="filter-bar reveal" {% if locked_to_level %}style="grid-template-columns:1.6fr 1fr auto;"{% endif %}>
+      {{ form.q }}
+      {{ form.category }}
+      {% if not locked_to_level %}{{ form.level }}{% endif %}
+      <button type="submit" class="btn btn-primary">Filtrer</button>
+    </form>
+
+    {% if courses %}
+    <div class="course-grid">
+      {% for course in courses %}
+      <a href="{{ course.get_absolute_url }}" class="course-card">
+        <div class="course-cover" {% if not course.cover %}style="background:linear-gradient(135deg, {{ course.category.color|default:'#3b5bdb' }}, #22b8cf);"{% endif %}>
+          {% if course.cover %}
+          <img src="{{ course.cover.url }}" alt="{{ course.title }}">
+          {% else %}
+          <div class="course-cover-pattern"></div>
+          {% endif %}
+        </div>
+        <div class="course-body">
+          <div class="course-meta">
+            <span class="chip">{{ course.code }}</span>
+            {% if course.category %}<span class="chip chip-amber">{{ course.category.name }}</span>{% endif %}
+          </div>
+          <h3>{{ course.title }}</h3>
+          <p class="excerpt">{{ course.short_description|default:course.description|truncatewords:20 }}</p>
+          <div class="course-footer">
+            <span>{{ course.get_level_display }}</span>
+            <span>{{ course.duration_hours }} h · {{ course.res_count }} ressource{{ course.res_count|pluralize }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🔍</div>
+      <p>Aucun module ne correspond à vos critères.</p>
+      <a href="{% url 'courses:front_catalog' %}" class="btn btn-secondary" style="margin-top:1rem;">Réinitialiser</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "layouts/app_shell.html" %}
+{% load static %}
+{% block body_class %}space-teacher{% endblock %}
+{% block space_label %}Academic Studio{% endblock %}
+{% block brand_url %}{% url 'courses:back_dashboard' %}{% endblock %}
+
+{% block pre_shell %}
+<div class="living-bg" aria-hidden="true">
+  <span class="b1"></span><span class="b2"></span><span class="b3"></span>
+</div>
+<button type="button" class="studio-nav-backdrop" id="studio-nav-backdrop" aria-label="Fermer le menu"></button>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/academic-studio.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-courses.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-resources.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-quizzes.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-analytics.css' %}">
+<link rel="stylesheet" href="{% static 'css/teacher-lms.css' %}">
+<link rel="stylesheet" href="{% static 'css/studio-polish.css' %}">
+<link rel="stylesheet" href="{% static 'css/themes.css' %}">
+{% block teacher_css %}{% endblock %}
+{% endblock %}
+
+{% block nav_toggle %}
+<button type="button" class="studio-nav-toggle" id="studio-nav-toggle" aria-controls="app-sidebar" aria-expanded="false" aria-label="Ouvrir le menu">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>
+{% endblock %}
+
+{% block sidebar %}
+<p class="nav-section-label">Studio</p>
+<a href="{% url 'courses:back_dashboard' %}" class="{% if request.resolver_match.url_name == 'back_dashboard' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">📊</span> Dashboard
+</a>
+<a href="{% url 'courses:back_course_list' %}" class="{% if request.resolver_match.url_name == 'back_course_list' or request.resolver_match.url_name == 'back_course_detail' or request.resolver_match.url_name == 'back_course_edit' or request.resolver_match.url_name == 'back_course_preview' or request.resolver_match.url_name == 'back_course_builder' or request.resolver_match.url_name == 'back_course_analytics' or 'chapter' in request.resolver_match.url_name or 'resource' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">📚</span> Courses
+</a>
+<a href="{% url 'courses:back_course_create' %}" class="{% if request.resolver_match.url_name == 'back_course_create' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">✨</span> Create course
+</a>
+<a href="{% url 'courses:back_resource_library' %}" class="{% if request.resolver_match.url_name == 'back_resource_library' or request.resolver_match.url_name == 'back_resource_create_standalone' or request.resolver_match.url_name == 'back_resource_create' or request.resolver_match.url_name == 'back_resource_edit' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">📁</span> Resources
+</a>
+<a href="{% url 'courses:back_quizzes' %}" class="{% if 'quiz' in request.resolver_match.url_name or 'question' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">📝</span> Quiz Center
+</a>
+<a href="{% url 'courses:back_students' %}" class="{% if request.resolver_match.url_name == 'back_students' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">👨‍🎓</span> Students
+</a>
+<div class="side-divider" aria-hidden="true"></div>
+<p class="nav-section-label">Account</p>
+<a href="{% url 'courses:front_notifications' %}" class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">🔔</span> Alerts
+  {% if unread_notifications %}<span class="side-badge">{{ unread_notifications }}</span>{% endif %}
+</a>
+<a href="{% url 'courses:profile' %}" class="{% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true">👤</span> Profile
+</a>
+{% if is_admin %}
+<a href="{% url 'courses:admin_dashboard' %}" class="side-link-accent">
+  <span class="nav-ico" aria-hidden="true">🛡️</span> Control Center
+</a>
+{% endif %}
+{% endblock %}
+
+{% block top_actions %}
+{% block studio_actions %}{% endblock %}
+<button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+  <span aria-hidden="true">🌙</span> Study Mode
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/academic-studio.js' %}"></script>
+<script src="{% static 'js/teacher-lms.js' %}"></script>
+{% block teacher_js %}{% endblock %}
+{% endblock %}

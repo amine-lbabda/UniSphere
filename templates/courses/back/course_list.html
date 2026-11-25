@@ -1,0 +1,220 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}Courses — Academic Studio{% endblock %}
+{% block page_title %}Courses{% endblock %}
+{% block page_sub %}Build, publish and manage your academic books{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ Create course</a>
+{% endblock %}
+
+{% block content %}
+{% if visibility or resource_filter or request.GET.status %}
+<div class="studio-filter-banner">
+  <span>
+    Filtered view
+    {% if request.GET.status %}· status: {{ request.GET.status }}{% endif %}
+    {% if visibility %}· visibility: {{ visibility }}{% endif %}
+    {% if resource_filter %}· resources: {{ resource_filter }}{% endif %}
+  </span>
+  <a href="{% url 'courses:back_course_list' %}" class="btn btn-ghost btn-sm">Clear filters</a>
+</div>
+{% endif %}
+
+<section class="studio-course-stats" aria-label="Course statistics">
+  <div class="studio-course-stat">
+    <span>Total</span>
+    <strong data-count="{{ stats.total }}">0</strong>
+  </div>
+  <div class="studio-course-stat is-ok">
+    <span>Visible</span>
+    <strong data-count="{{ stats.visible }}">0</strong>
+  </div>
+  <div class="studio-course-stat is-warn">
+    <span>Hidden</span>
+    <strong data-count="{{ stats.hidden }}">0</strong>
+  </div>
+  <div class="studio-course-stat">
+    <span>Students</span>
+    <strong data-count="{{ stats.students }}">0</strong>
+  </div>
+  <div class="studio-course-stat">
+    <span>Resources</span>
+    <strong data-count="{{ stats.resources }}">0</strong>
+  </div>
+  <div class="studio-course-stat">
+    <span>Quizzes</span>
+    <strong data-count="{{ stats.quizzes }}">0</strong>
+  </div>
+</section>
+
+<form method="get" class="studio-course-toolbar" id="studio-course-filters">
+  <input
+    type="search"
+    id="mod-live-q"
+    name="q"
+    value="{{ request.GET.q }}"
+    class="form-control"
+    placeholder="Search courses…"
+    autocomplete="off"
+    aria-label="Search courses"
+  >
+  <div class="studio-filter-chips" id="mod-status-chips" role="group" aria-label="Quick filters">
+    <button type="button" class="studio-chip {% if not visibility and not request.GET.status %}is-on{% endif %}" data-vis="" data-status="">All</button>
+    <button type="button" class="studio-chip {% if visibility == 'visible' %}is-on{% endif %}" data-vis="visible">Visible</button>
+    <button type="button" class="studio-chip {% if visibility == 'hidden' %}is-on{% endif %}" data-vis="hidden">Hidden</button>
+    <button type="button" class="studio-chip {% if request.GET.status == 'published' %}is-on{% endif %}" data-status="published">Published</button>
+    <button type="button" class="studio-chip {% if request.GET.status == 'draft' %}is-on{% endif %}" data-status="draft">Draft</button>
+    <button type="button" class="studio-chip {% if request.GET.status == 'archived' %}is-on{% endif %}" data-status="archived">Archived</button>
+  </div>
+  <div class="studio-toolbar-selects">
+    {{ form.category }}
+    {{ form.level }}
+  </div>
+  <input type="hidden" name="status" id="filter-status" value="{{ request.GET.status }}">
+  <input type="hidden" name="visibility" id="filter-visibility" value="{{ visibility }}">
+  {% if resource_filter %}<input type="hidden" name="resource" value="{{ resource_filter }}">{% endif %}
+  <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
+</form>
+
+{% if courses %}
+<div class="studio-course-grid" id="mod-grid">
+  {% for c in courses %}
+  {% with ready=c.readiness_score %}
+  <article
+    class="studio-course-card reveal"
+    data-status="{{ c.status }}"
+    data-visible="{% if c.is_student_accessible %}1{% else %}0{% endif %}"
+    data-search="{{ c.code }} {{ c.title }} {{ c.get_level_display }} {{ c.category.name|default:'' }} {{ c.instructor.get_full_name|default:c.instructor.username }}"
+    data-course-id="{{ c.pk }}"
+  >
+    <div
+      class="studio-course-cover"
+      {% if c.cover %}style="background-image:linear-gradient(135deg, rgba(91,92,226,0.55), rgba(6,182,212,0.35)), url('{{ c.cover.url }}');"{% endif %}
+      aria-hidden="true"
+    ></div>
+    <div class="studio-course-body">
+      <div class="studio-course-meta">
+        <span class="studio-course-code">{{ c.code }}</span>
+        <span class="studio-state" data-state="{{ c.studio_state }}" data-studio-state>
+          <span data-studio-label>{{ c.studio_state_label }}</span>
+        </span>
+        <span class="chip">{{ c.get_level_display }}</span>
+      </div>
+      <h3 class="studio-course-title">
+        <a href="{% url 'courses:back_course_detail' c.pk %}">📘 {{ c.title }}</a>
+      </h3>
+      {% if c.short_description or c.description %}
+      <p class="studio-course-desc">{{ c.short_description|default:c.description|truncatewords:18 }}</p>
+      {% endif %}
+      <p class="studio-course-teacher">Teacher: {{ c.instructor.get_full_name|default:c.instructor.username }}</p>
+      <div class="studio-course-facts" aria-label="Course metrics">
+        <div class="studio-course-fact"><span>Students</span><strong>{{ c.student_count }}</strong></div>
+        <div class="studio-course-fact"><span>Resources</span><strong>{{ c.res_count }}</strong></div>
+        <div class="studio-course-fact"><span>Quizzes</span><strong>{{ c.quiz_count }}</strong></div>
+      </div>
+      <div class="studio-course-progress">
+        <div class="studio-course-progress-label">
+          <span>Content readiness</span>
+          <span>{{ ready }}%</span>
+        </div>
+        <div class="studio-course-progress-bar" aria-hidden="true">
+          <i style="width:{{ ready }}%"></i>
+        </div>
+      </div>
+      <div class="studio-course-foot">
+          <div class="studio-course-actions">
+            <a href="{% url 'courses:back_course_detail' c.pk %}" class="btn btn-sm btn-primary">Manage</a>
+            <a href="{% url 'courses:back_course_builder' c.pk %}" class="btn btn-sm btn-secondary">Builder</a>
+            <a href="{% url 'courses:back_course_analytics' c.pk %}" class="btn btn-sm btn-ghost">Analytics</a>
+            <a href="{% url 'courses:back_course_preview' c.pk %}" class="btn btn-sm btn-ghost">Preview</a>
+          <button
+            type="button"
+            class="vis-toggle"
+            data-toggle-visibility="{% url 'courses:back_course_toggle_visibility' c.pk %}"
+            aria-label="Toggle visibility for {{ c.title }}"
+          >
+            <span class="vis-pill {% if c.is_student_accessible %}on{% else %}off{% endif %}">
+              {% if c.is_student_accessible %}🟢{% else %}🔒{% endif %}
+              <span class="vis-text">{{ c.visibility_label }}</span>
+            </span>
+          </button>
+        </div>
+        <details class="studio-menu">
+          <summary aria-label="More actions">⋮</summary>
+          <div class="studio-menu-panel">
+            <a href="{% url 'courses:back_course_edit' c.pk %}">Edit</a>
+            <a href="{% url 'courses:back_course_preview' c.pk %}">Preview as student</a>
+            <form method="post" action="{% url 'courses:back_course_delete' c.pk %}" data-confirm="Delete « {{ c.code }} — {{ c.title }} » permanently?">
+              {% csrf_token %}
+              <button type="submit" class="is-danger">Delete</button>
+            </form>
+          </div>
+        </details>
+      </div>
+      <div class="studio-course-updated">Updated {{ c.updated_at|date:"d M Y" }}</div>
+    </div>
+  </article>
+  {% endwith %}
+  {% endfor %}
+</div>
+<p id="mod-empty-filter" hidden class="studio-empty-inline" style="text-align:center;padding:1.5rem;">No courses match your search.</p>
+{% else %}
+<div class="empty-state">
+  <div class="icon">📚</div>
+  <p><strong>No courses yet.</strong></p>
+  <p>Create your first course to get started.</p>
+  <a href="{% url 'courses:back_course_create' %}" class="btn btn-primary" style="margin-top:1rem;">+ Create course</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block teacher_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cards = [...document.querySelectorAll("#mod-grid .studio-course-card")];
+  const qInput = document.getElementById("mod-live-q");
+  const empty = document.getElementById("mod-empty-filter");
+  const statusInput = document.getElementById("filter-status");
+  const visInput = document.getElementById("filter-visibility");
+  let status = statusInput?.value || "";
+  let vis = visInput?.value || "";
+
+  const apply = () => {
+    if (!cards.length) return;
+    const q = (qInput?.value || "").trim().toLowerCase();
+    let shown = 0;
+    cards.forEach((card) => {
+      const okStatus = !status || card.dataset.status === status;
+      const okVis =
+        !vis ||
+        (vis === "visible" && card.dataset.visible === "1") ||
+        (vis === "hidden" && card.dataset.visible === "0");
+      const okQ = !q || (card.dataset.search || "").toLowerCase().includes(q);
+      const show = okStatus && okVis && okQ;
+      card.hidden = !show;
+      if (show) shown += 1;
+    });
+    if (empty) empty.hidden = shown > 0;
+  };
+
+  qInput?.addEventListener("input", apply);
+  document.querySelectorAll("#mod-status-chips .studio-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll("#mod-status-chips .studio-chip").forEach((c) => c.classList.remove("is-on"));
+      chip.classList.add("is-on");
+      status = chip.dataset.status || "";
+      vis = chip.dataset.vis || "";
+      if (statusInput) statusInput.value = status;
+      if (visInput) visInput.value = vis;
+      apply();
+    });
+  });
+  apply();
+
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll(".studio-menu[open]").forEach((d) => {
+      if (!d.contains(e.target)) d.removeAttribute("open");
+    });
+  });
+});
+</script>
+{% endblock %}

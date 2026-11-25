@@ -1,0 +1,288 @@
+{% extends "layouts/student.html" %}
+{% load static %}
+{% block title %}Home — Digital Student Desk{% endblock %}
+{% block page_title %}Home{% endblock %}
+{% block page_sub %}{{ profile.get_academic_level_display }} · {{ profile.filiere_display }}{% endblock %}
+
+{% block content %}
+<div class="home-desk">
+
+  {# A. Welcome #}
+  <section class="home-welcome reveal-up">
+    <div class="home-welcome-main">
+      <p class="home-kicker">Digital Student Desk</p>
+      <h2 class="home-hello">{{ greeting }}, {{ user.first_name|default:user.username }}</h2>
+      <p class="home-date">{{ today|date:"l d F Y" }}</p>
+      <p class="home-context">{{ contextual_message }}</p>
+    </div>
+    <div class="home-welcome-side">
+      <div class="progress-ring-wrap" aria-label="Progression moyenne {{ avg_progress }}%">
+        <svg class="progress-ring" data-percent="{{ avg_progress }}" viewBox="0 0 96 96" width="96" height="96">
+          <circle class="progress-ring-bg" cx="48" cy="48" r="40" fill="none" stroke-width="8"/>
+          <circle class="progress-ring-value" cx="48" cy="48" r="40" fill="none" stroke-width="8"
+                  stroke-linecap="round" transform="rotate(-90 48 48)"/>
+        </svg>
+        <div class="progress-ring-label">
+          <strong>{{ avg_progress }}%</strong>
+          <span>Progress</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# B. Quick stats #}
+  <section class="home-stats reveal-up" aria-label="Résumé académique">
+    <div class="home-stat">
+      <span>Modules</span>
+      <strong data-count-up="{{ course_cards|length }}">0</strong>
+    </div>
+    <div class="home-stat">
+      <span>Ressources</span>
+      <strong data-count-up="{{ resource_total }}">0</strong>
+    </div>
+    <div class="home-stat">
+      <span>Progression</span>
+      <strong data-count-up="{{ avg_progress }}" data-suffix="%">0%</strong>
+    </div>
+    <div class="home-stat">
+      <span>Quiz ouverts</span>
+      <strong data-count-up="{{ quizzes|length }}">0</strong>
+    </div>
+  </section>
+
+  {# C. Today's Focus #}
+  <section class="focus-card reveal-up">
+    <p class="focus-kicker">Today’s Focus</p>
+    {% if focus %}
+    <div class="focus-body">
+      <div>
+        <h3>{{ focus.title }}</h3>
+        <p>{{ focus.subtitle }}</p>
+        <div class="focus-bar" aria-hidden="true">
+          <i style="width:{{ focus.percent }}%"></i>
+        </div>
+      </div>
+      <a href="{{ focus.url }}" class="desk-btn desk-btn-primary">{{ focus.cta }}</a>
+    </div>
+    {% else %}
+    <div class="focus-body focus-body--calm">
+      <h3>Vous êtes à jour</h3>
+      <p>Aucune échéance urgente pour le moment. Explorez vos modules ou ouvrez le livre.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  {# D. Interactive desk / book #}
+  <section class="home-desk-panel reveal-up" aria-label="Bureau académique interactif">
+    <div class="home-desk-panel-head">
+      <div>
+        <h3>Interactive Student Desk</h3>
+        <p>Résumé immersif — la navigation reste dans la sidebar.</p>
+      </div>
+      <div class="desk-book-actions">
+        <button type="button" class="desk-btn desk-btn-primary" id="desk-skip-open">Ouvrir le livre</button>
+        <button type="button" class="desk-btn desk-btn-ghost" id="desk-skip-close" hidden>Fermer le livre</button>
+      </div>
+    </div>
+
+    <div class="desk-surface desk-surface--contained">
+      <div class="desk-props desk-props--subtle" aria-hidden="true">
+        <div class="desk-prop desk-prop--laptop"><div class="prop-laptop"><div class="screen"></div><div class="base"></div></div></div>
+        <div class="desk-prop desk-prop--calendar">
+          <div class="prop-calendar">
+            <div class="cal-head">Jour</div>
+            <div class="cal-day">{{ today|date:"d" }}</div>
+            <div class="cal-month">{{ today|date:"M" }}</div>
+          </div>
+        </div>
+        <div class="desk-prop desk-prop--mug"><div class="prop-mug"><div class="steam"></div><div class="cup"></div><div class="handle"></div></div></div>
+      </div>
+
+      <div class="book-stage" id="book-stage">
+        <div class="book is-closed" id="academic-book" role="region" aria-label="Livre académique">
+          <div class="book-spine" aria-hidden="true"></div>
+          <div class="book-cover" role="button" tabindex="0" aria-label="Ouvrir le livre">
+            <span class="book-cover-badge">Academic Journal</span>
+            <div>
+              <h2>My Digital<br>Academic Desk</h2>
+              <p>{{ profile.get_academic_level_display }}</p>
+            </div>
+            <span class="book-cover-cta">Ouvrir →</span>
+          </div>
+
+          <div class="book-interior">
+            <div class="book-spread is-active" data-page="1">
+              <div class="book-page book-page--left">
+                <h2 class="book-greeting">{{ greeting }}, {{ user.first_name|default:user.username }}</h2>
+                <p class="book-date">{{ today|date:"l d F Y" }}</p>
+                <div class="book-stats">
+                  <div class="book-stat"><span>Modules</span><strong>{{ course_cards|length }}</strong></div>
+                  <div class="book-stat"><span>Ressources</span><strong>{{ resource_total }}</strong></div>
+                  <div class="book-stat"><span>Progression</span><strong>{{ avg_progress }}%</strong></div>
+                  <div class="book-stat"><span>Quiz</span><strong>{{ quizzes|length }}</strong></div>
+                </div>
+              </div>
+              <div class="book-page book-page--right">
+                <p class="book-day-title">Your day</p>
+                <ul class="book-day-list">
+                  {% for q in upcoming %}
+                  <li>
+                    <a href="{% url 'courses:front_quiz_take' q.pk %}">{{ q.title }}</a>
+                    <small>Échéance · {{ q.course.code }} · {{ q.due_date|date:"d/m H:i" }}</small>
+                  </li>
+                  {% empty %}
+                  <li><strong>Aucune échéance proche</strong><small>{{ contextual_message }}</small></li>
+                  {% endfor %}
+                  {% for n in recent_notifications|slice:":2" %}
+                  <li>
+                    {% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}<strong>{{ n.title }}</strong>{% endif %}
+                    <small>{{ n.created_at|date:"d/m" }} · {{ n.message|truncatewords:8 }}</small>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            <div class="book-spread" data-page="2">
+              <div class="book-page book-page--left">
+                <p class="book-day-title">Upcoming deadlines</p>
+                <ul class="book-day-list">
+                  {% for q in upcoming %}
+                  <li>
+                    <a href="{% url 'courses:front_quiz_take' q.pk %}">{{ q.title }}</a>
+                    <small>{{ q.course.title }} · {{ q.due_date|date:"d/m/Y H:i" }}</small>
+                  </li>
+                  {% empty %}
+                  <li><strong>Rien de prévu</strong><small>Pas d’échéance quiz</small></li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="book-page book-page--right">
+                <p class="book-day-title">Recent resources</p>
+                <ul class="book-day-list">
+                  {% for item in library_resources|slice:":4" %}
+                  <li>
+                    <a href="{% if item.resource.url %}{{ item.resource.url }}{% elif item.resource.file %}{{ item.resource.file.url }}{% else %}{{ item.course.get_absolute_url }}{% endif %}"
+                       {% if item.resource.url or item.resource.file %}target="_blank" rel="noopener"{% endif %}>
+                      {{ item.resource.title }}
+                    </a>
+                    <small>{{ item.course.code }} · {{ item.resource.get_resource_type_display }}</small>
+                  </li>
+                  {% empty %}
+                  <li><strong>Aucune ressource</strong><small>Elles apparaîtront ici</small></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            <div class="book-pager">
+              <button type="button" class="book-pager-btn" id="book-prev">‹ Previous</button>
+              <span class="book-pager-dots" id="book-dots">1 / 2</span>
+              <button type="button" class="book-pager-btn" id="book-next">Next ›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# E. Activity + courses #}
+  <div class="home-below">
+    <section class="home-card reveal-up">
+      <div class="home-card-head">
+        <h3>Today’s activity</h3>
+        <a href="{% url 'courses:front_notifications' %}">Alertes →</a>
+      </div>
+      <ul class="home-activity">
+        {% for q in upcoming %}
+        <li>
+          <span class="tag tag-deadline">Quiz</span>
+          <div>
+            <a href="{% url 'courses:front_quiz_take' q.pk %}">{{ q.title }}</a>
+            <small>{{ q.course.code }} · {{ q.due_date|date:"d/m/Y H:i" }}</small>
+          </div>
+        </li>
+        {% endfor %}
+        {% for n in recent_notifications|slice:":4" %}
+        <li>
+          <span class="tag tag-alert">Alerte</span>
+          <div>
+            {% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}<strong>{{ n.title }}</strong>{% endif %}
+            <small>{{ n.created_at|date:"d/m/Y" }} · {{ n.message|truncatewords:12 }}</small>
+          </div>
+        </li>
+        {% empty %}
+        {% if not upcoming %}
+        <li><div><strong>Rien de nouveau</strong><small>Votre journée est claire</small></div></li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="home-card reveal-up">
+      <div class="home-card-head">
+        <h3>Your courses</h3>
+        <a href="{% url 'courses:front_catalog' %}">Voir tout →</a>
+      </div>
+      <div class="home-course-mini">
+        {% for item in course_cards|slice:":4" %}
+        <a href="{{ item.course.get_absolute_url }}" class="home-course-row">
+          <div>
+            <strong>{{ item.course.title }}</strong>
+            <small>{{ item.course.code }} · {{ item.progress.label }}</small>
+          </div>
+          <span>{{ item.progress.percent }}%</span>
+        </a>
+        {% empty %}
+        <p class="home-empty">Aucun module affecté.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  {% if library_resources %}
+  <section class="home-card home-card--full reveal-up">
+    <div class="home-card-head">
+      <h3>Recent resources</h3>
+      <a href="{% url 'courses:student_resources' %}">Bibliothèque →</a>
+    </div>
+    <div class="library-grid library-grid--home">
+      {% for item in library_resources|slice:":6" %}
+      {% with r=item.resource %}
+      <a class="library-book" data-type="{{ r.resource_type }}"
+         href="{% if r.url %}{{ r.url }}{% elif r.file %}{{ r.file.url }}{% else %}{{ item.course.get_absolute_url }}{% endif %}"
+         {% if r.url or r.file %}target="_blank" rel="noopener"{% endif %}>
+        <span class="lib-type">{{ r.get_resource_type_display }}</span>
+        <p class="lib-title">{{ r.title|truncatechars:26 }}</p>
+        <span class="lib-course">{{ item.course.code }}</span>
+      </a>
+      {% endwith %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# F. Academic journey — real milestones only #}
+  {% if journey %}
+  <section class="journey-card home-card home-card--full reveal-up">
+    <div class="home-card-head">
+      <h3>Your Academic Journey</h3>
+    </div>
+    <ol class="journey-track">
+      {% for step in journey %}
+      <li>
+        <span class="journey-dot" aria-hidden="true"></span>
+        <strong>{{ step.label }}</strong>
+        <small>{{ step.detail }} · {{ step.when|date:"d/m/Y" }}</small>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block desk_js %}
+<script src="{% static 'js/book.js' %}"></script>
+{% endblock %}

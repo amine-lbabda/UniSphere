@@ -1,0 +1,152 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}{{ title }} — Academic Studio{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if mode == "create" %}Create → organize → preview → publish{% else %}Edit · {{ course.code }}{% endif %}{% endblock %}
+{% block studio_actions %}
+<a href="{% if course %}{% url 'courses:back_course_detail' course.pk %}{% else %}{% url 'courses:back_course_list' %}{% endif %}" class="btn btn-secondary btn-sm">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="studio-form-shell reveal">
+  {% csrf_token %}
+
+  <section class="studio-form-section">
+    <h2>Course identity</h2>
+    <p class="studio-form-hint">This becomes the “book” students open on the Digital Student Desk.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="{{ form.title.id_for_label }}">Title</label>
+        {{ form.title }}
+        {{ form.title.errors }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.code.id_for_label }}">Code</label>
+        {{ form.code }}
+        {{ form.code.errors }}
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="{{ form.short_description.id_for_label }}">Short summary</label>
+      {{ form.short_description }}
+      {{ form.short_description.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+      {{ form.description.errors }}
+    </div>
+  </section>
+
+  <section class="studio-form-section">
+    <h2>Audience &amp; department</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="{{ form.category.id_for_label }}">Department *</label>
+        {{ form.category }}
+        <p class="help">Tronc-Commun · Informatique · EM · GC</p>
+        {{ form.category.errors }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.level.id_for_label }}">Target programme *</label>
+        {{ form.level }}
+        <p class="help">Levels depend on the selected department.</p>
+        {{ form.level.errors }}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="{{ form.duration_hours.id_for_label }}">Hours</label>
+        {{ form.duration_hours }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.cover.id_for_label }}">Cover image</label>
+        {{ form.cover }}
+        {{ form.cover.errors }}
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="{{ form.prerequisites.id_for_label }}">Prerequisites</label>
+      {{ form.prerequisites }}
+      <p class="help">Free text — skills, prior courses, tools…</p>
+      {{ form.prerequisites.errors }}
+    </div>
+  </section>
+
+  <section class="studio-form-section">
+    <h2>Publish &amp; visibility</h2>
+    <p class="studio-form-hint">Visible + target programme → all students in that class are enrolled automatically. Hidden keeps the course private while you prepare it.</p>
+    <div class="form-group">
+      <label for="{{ form.status.id_for_label }}">Status</label>
+      {{ form.status }}
+      {{ form.status.errors }}
+    </div>
+    <div class="studio-vis-panel" style="margin-top:0.75rem;">
+      <label class="studio-vis-option {% if form.is_visible.value %}is-active{% endif %}" id="vis-opt-on">
+        <input type="radio" name="studio_vis_ui" value="1" {% if form.is_visible.value %}checked{% endif %} data-sync-visible="on">
+        <span>
+          <strong>● Visible to students</strong>
+          <span>Course appears on the Student Desk when published</span>
+        </span>
+      </label>
+      <label class="studio-vis-option {% if not form.is_visible.value %}is-active{% endif %}" id="vis-opt-off">
+        <input type="radio" name="studio_vis_ui" value="0" {% if not form.is_visible.value %}checked{% endif %} data-sync-visible="off">
+        <span>
+          <strong>○ Hidden from students</strong>
+          <span>Prepare content privately in Academic Studio</span>
+        </span>
+      </label>
+    </div>
+    {# Real field kept for Django form validation #}
+    <div hidden>
+      {{ form.is_visible }}
+    </div>
+    {{ form.is_visible.errors }}
+  </section>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-glow">{% if mode == "create" %}Create course{% else %}Save changes{% endif %}</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block teacher_js %}
+<script>
+(function () {
+  const DEPT_LEVELS = {{ dept_levels_json|default:"{}"|safe }};
+  const cat = document.getElementById("id_category");
+  const level = document.getElementById("id_level");
+  if (cat && level) {
+    function refillLevels(keepValue) {
+      const list = DEPT_LEVELS[cat.value] || [];
+      const current = keepValue || level.value;
+      level.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = list.length
+        ? "Choose a programme"
+        : "Choose a department first";
+      level.appendChild(placeholder);
+      list.forEach(([code, label]) => {
+        const opt = document.createElement("option");
+        opt.value = code;
+        opt.textContent = label;
+        if (code === current) opt.selected = true;
+        level.appendChild(opt);
+      });
+    }
+    cat.addEventListener("change", () => refillLevels(""));
+    refillLevels(level.value);
+  }
+
+  const realVis = document.getElementById("id_is_visible");
+  document.querySelectorAll("[data-sync-visible]").forEach((radio) => {
+    radio.addEventListener("change", () => {
+      if (!realVis) return;
+      realVis.checked = radio.getAttribute("data-sync-visible") === "on";
+      document.getElementById("vis-opt-on")?.classList.toggle("is-active", realVis.checked);
+      document.getElementById("vis-opt-off")?.classList.toggle("is-active", !realVis.checked);
+    });
+  });
+})();
+</script>
+{% endblock %}

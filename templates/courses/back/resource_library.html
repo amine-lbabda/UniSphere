@@ -1,0 +1,111 @@
+{% extends "layouts/teacher.html" %}
+{% load static %}
+{% block title %}Resource Library — Academic Studio{% endblock %}
+{% block page_title %}Resource Library{% endblock %}
+{% block page_sub %}Search, filter, publish and schedule academic materials{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_resource_create_standalone' %}" class="btn btn-primary btn-sm btn-glow">+ Add resource</a>
+{% endblock %}
+
+{% block teacher_css %}
+<link rel="stylesheet" href="{% static 'css/studio-resources.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<section class="reslib-stats" aria-label="Resource statistics">
+  <div class="reslib-stat"><span>Total</span><strong data-count="{{ stats.total }}">0</strong></div>
+  <div class="reslib-stat"><span>Visible</span><strong data-count="{{ stats.visible }}">0</strong></div>
+  <div class="reslib-stat"><span>Hidden</span><strong data-count="{{ stats.hidden }}">0</strong></div>
+  <div class="reslib-stat"><span>Scheduled</span><strong data-count="{{ stats.scheduled }}">0</strong></div>
+</section>
+
+<form method="get" class="reslib-toolbar" id="reslib-filters">
+  <input
+    type="search"
+    name="q"
+    value="{{ q }}"
+    class="form-control"
+    placeholder="Search resources…"
+    aria-label="Search resources"
+  >
+  <div class="reslib-chips" role="group" aria-label="Type filters">
+    <a class="reslib-chip {% if not type_filter %}is-on{% endif %}" href="?q={{ q }}&visibility={{ visibility }}&course={{ course_id }}">All</a>
+    {% for value, label in type_choices %}
+    <a class="reslib-chip {% if type_filter == value %}is-on{% endif %}" href="?q={{ q }}&type={{ value }}&visibility={{ visibility }}&course={{ course_id }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <div class="reslib-chips" role="group" aria-label="Visibility filters">
+    <a class="reslib-chip {% if not visibility %}is-on{% endif %}" href="?q={{ q }}&type={{ type_filter }}&course={{ course_id }}">Any status</a>
+    <a class="reslib-chip {% if visibility == 'visible' %}is-on{% endif %}" href="?q={{ q }}&type={{ type_filter }}&visibility=visible&course={{ course_id }}">Visible</a>
+    <a class="reslib-chip {% if visibility == 'hidden' %}is-on{% endif %}" href="?q={{ q }}&type={{ type_filter }}&visibility=hidden&course={{ course_id }}">Hidden</a>
+    <a class="reslib-chip {% if visibility == 'scheduled' %}is-on{% endif %}" href="?q={{ q }}&type={{ type_filter }}&visibility=scheduled&course={{ course_id }}">Scheduled</a>
+  </div>
+  <select name="course" class="form-control" onchange="this.form.submit()" aria-label="Filter by course">
+    <option value="">All courses</option>
+    {% for c in courses %}
+    <option value="{{ c.pk }}" {% if course_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.code }} — {{ c.title }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+{% if resources %}
+<div class="reslib-grid">
+  {% for r in resources %}
+  <article class="reslib-card reveal" data-res-id="{{ r.pk }}">
+    <a href="{% url 'courses:back_resource_edit' r.pk %}" class="reslib-card-face" data-type="{{ r.resource_type }}" aria-label="Open {{ r.title }}">
+      <span class="reslib-card-ico" aria-hidden="true">{{ r.type_icon }}</span>
+    </a>
+    <div class="reslib-card-body">
+      <h3><a href="{% url 'courses:back_resource_edit' r.pk %}" style="color:inherit;text-decoration:none;">{{ r.title }}</a></h3>
+      <div class="reslib-card-meta">
+        {{ r.get_resource_type_display }} · {{ r.course.code }}
+        <br>Teacher: {{ r.course.instructor.get_full_name|default:r.course.instructor.username }}
+      </div>
+      <div class="reslib-card-foot">
+        <span class="studio-state" data-state="{{ r.studio_state }}">
+          {% if r.studio_state == "scheduled" %}
+            Scheduled
+            {% if r.scheduled_at %}<br><small style="font-weight:600;">{{ r.scheduled_at|date:"d M · H:i" }}</small>{% endif %}
+          {% else %}
+            {{ r.studio_state_label }}
+          {% endif %}
+        </span>
+      </div>
+      <div class="reslib-card-actions">
+        <button
+          type="button"
+          class="vis-toggle btn btn-sm btn-ghost"
+          data-toggle-visibility="{% url 'courses:back_resource_toggle_visibility' r.pk %}"
+          aria-label="Toggle visibility"
+        >
+          <span class="vis-pill {% if r.is_available_to_students %}on{% else %}off{% endif %}">
+            <span class="vis-text">{{ r.visibility_label }}</span>
+          </span>
+        </button>
+        <a href="{% url 'courses:back_resource_edit' r.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+        <a href="{% url 'courses:back_resource_preview' r.pk %}" class="btn btn-sm btn-ghost">Preview</a>
+        <a href="{% url 'courses:back_course_detail' r.course_id %}" class="btn btn-sm btn-ghost">Course</a>
+        <form method="post" action="{% url 'courses:back_resource_delete' r.pk %}" data-confirm="Delete « {{ r.title }} » ?">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'courses:back_resource_library' %}">
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </div>
+      <div class="reslib-card-meta">
+        Created {{ r.created_at|date:"d/m/Y" }}
+        · Updated {{ r.updated_at|date:"d/m/Y" }}
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="icon">📁</div>
+  <p><strong>No resources yet.</strong></p>
+  <p>Upload PDFs, videos, presentations or links for your courses.</p>
+  <a href="{% url 'courses:back_resource_create_standalone' %}" class="btn btn-primary" style="margin-top:1rem;">+ Add resource</a>
+</div>
+{% endif %}
+{% endblock %}

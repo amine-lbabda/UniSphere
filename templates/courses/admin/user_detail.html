@@ -1,0 +1,55 @@
+{% extends "layouts/admin.html" %}
+{% block title %}{{ edit_user.get_full_name|default:edit_user.username }} — Console{% endblock %}
+{% block page_title %}Fiche utilisateur{% endblock %}
+{% block page_sub %}#{{ edit_user.pk }} · {{ profile.get_role_display }}{% endblock %}
+{% block top_actions %}
+<a href="{% url 'courses:admin_user_edit' edit_user.pk %}" class="btn btn-primary btn-sm">Modifier</a>
+<a href="{% url 'courses:admin_users' %}" class="btn btn-secondary btn-sm">Retour à la liste</a>
+{% endblock %}
+
+{% block content %}
+<div class="profile-layout">
+  <aside class="profile-card">
+    <div class="profile-avatar-wrap">
+      {% if profile.photo %}
+      <img src="{{ profile.photo.url }}" alt="" class="profile-avatar-img">
+      {% else %}
+      <div class="profile-avatar-fallback">{{ edit_user.first_name|default:edit_user.username|slice:":1"|upper }}</div>
+      {% endif %}
+    </div>
+    <h2>{{ edit_user.get_full_name|default:edit_user.username }}</h2>
+    <p class="profile-role"><span class="chip">{{ profile.get_role_display }}</span></p>
+    <p class="profile-muted">@{{ edit_user.username }}</p>
+  </aside>
+
+  <section class="profile-details form-card">
+    <h3 class="mod-section-title" style="margin-top:0;">Informations personnelles</h3>
+    <div class="info-row"><span>ID</span><strong>{{ edit_user.pk }}</strong></div>
+    <div class="info-row"><span>Prénom</span><strong>{{ edit_user.first_name|default:"—" }}</strong></div>
+    <div class="info-row"><span>Nom</span><strong>{{ edit_user.last_name|default:"—" }}</strong></div>
+    <div class="info-row"><span>Email</span><strong>{{ edit_user.email|default:"—" }}</strong></div>
+    <div class="info-row"><span>Téléphone</span><strong>{{ profile.phone|default:"—" }}</strong></div>
+    <div class="info-row"><span>Type d’utilisateur</span><strong>{{ profile.get_role_display }}</strong></div>
+    <div class="info-row"><span>Matricule</span><strong>{{ profile.student_id|default:"—" }}</strong></div>
+    <div class="info-row"><span>Parcours</span><strong>{{ profile.get_academic_level_display }}</strong></div>
+    <div class="info-row"><span>Date de création</span><strong>{{ edit_user.date_joined|date:"d/m/Y H:i" }}</strong></div>
+    <div class="info-row"><span>Statut du compte</span><strong>{% if edit_user.is_active %}<span class="badge badge-published">Actif</span>{% else %}<span class="badge badge-archived">Désactivé</span>{% endif %}</strong></div>
+
+    <div class="form-actions" style="margin-top:1.25rem;">
+      <a href="{% url 'courses:admin_user_edit' edit_user.pk %}" class="btn btn-primary">Modifier</a>
+      {% if edit_user.pk != request.user.pk %}
+      <form method="post" action="{% url 'courses:admin_user_toggle_active' edit_user.pk %}" data-confirm="{% if edit_user.is_active %}Désactiver{% else %}Activer{% endif %} ce compte ?">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="detail">
+        <button type="submit" class="btn {% if edit_user.is_active %}btn-secondary{% else %}btn-primary{% endif %}">{% if edit_user.is_active %}Désactiver{% else %}Activer{% endif %}</button>
+      </form>
+      <form method="post" action="{% url 'courses:admin_user_delete' edit_user.pk %}" data-confirm="Supprimer définitivement cet utilisateur ?">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+      </form>
+      {% endif %}
+      <a href="{% url 'courses:admin_users' %}" class="btn btn-secondary">Retour à la liste</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends layout|default:"layouts/preview_student.html" %}
+{% block title %}Preview · {{ resource.title }} — UniSphere{% endblock %}
+{% block page_title %}{{ resource.title }}{% endblock %}
+{% block page_sub %}{{ course.code }} · student resource view{% endblock %}
+
+{% block content %}
+{% if not student_sees %}
+<div class="preview-unavailable reveal-up">
+  <div class="icon" aria-hidden="true">🔒</div>
+  <h2>Students cannot see this resource</h2>
+  <p>
+    Course state: <strong>{{ course.studio_state_label }}</strong>
+    · Resource state: <strong>{{ resource.studio_state_label }}</strong>
+    {% if resource.scheduled_at and resource.is_scheduled_future %}
+    · Scheduled for <strong>{{ resource.scheduled_at|date:"d M Y · H:i" }}</strong>
+    {% endif %}
+  </p>
+  <p style="margin-bottom:1.25rem;">Hidden, unpublished, or future-scheduled content never appears on the Digital Student Desk.</p>
+  <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+    <a href="{% url 'courses:back_resource_edit' resource.pk %}" class="desk-btn desk-btn-primary">Edit resource</a>
+    <a href="{% url 'courses:back_resource_library' %}" class="desk-btn desk-btn-ghost">← Resource Library</a>
+  </div>
+</div>
+{% else %}
+<div class="manual" style="max-width:760px;margin:0 auto;">
+  <section class="manual-section reveal-up">
+    <h2><span class="sec-ico" aria-hidden="true">▣</span> Resource</h2>
+    <div class="resource-visual-list">
+      {% include "courses/partials/resource_visual_row.html" with r=resource %}
+    </div>
+    {% if resource.description %}
+    <div class="manual-prose" style="margin-top:1rem;">{{ resource.description }}</div>
+    {% endif %}
+    <p style="color:var(--desk-muted);font-size:0.85rem;margin-top:1rem;">
+      {{ resource.get_resource_type_display }}
+      · {{ course.code }}
+      {% if resource.chapter %} · {{ resource.chapter.title }}{% endif %}
+      · {{ resource.studio_state_label }}
+    </p>
+  </section>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem;">
+    <a href="{% url 'courses:back_course_preview' course.pk %}" class="desk-btn desk-btn-primary">Open full course preview</a>
+    <a href="{% url 'courses:back_resource_library' %}" class="desk-btn desk-btn-ghost">← Back to Academic Studio</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends layout|default:"base.html" %}
+{% load static %}
+{% block title %}{{ course.title }} — UniSphere{% endblock %}
+{% block page_title %}{{ course.code }}{% endblock %}
+{% block page_sub %}{{ course.title }}{% endblock %}
+
+{% block extra_css %}
+{% if is_student_view %}
+<link rel="stylesheet" href="{% static 'css/academic-desk.css' %}">
+<link rel="stylesheet" href="{% static 'css/courses.css' %}">
+<link rel="stylesheet" href="{% static 'css/resources.css' %}">
+<link rel="stylesheet" href="{% static 'css/animations.css' %}">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if is_preview and preview_blocked %}
+<div class="preview-unavailable reveal-up">
+  <div class="icon" aria-hidden="true">🔒</div>
+  <h2>Students cannot open this course</h2>
+  <p>
+    Status: <strong>{{ course.get_status_display }}</strong>
+    · Visibility: <strong>{{ course.visibility_label }}</strong>.
+    On the Digital Student Desk this course is hidden — the catalogue and direct URL are blocked.
+  </p>
+  <p style="margin-bottom:1.25rem;">Publish the course and set visibility to “Visible to students” so learners can see it.</p>
+  <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+    <a href="{% url 'courses:back_course_detail' course.pk %}" class="desk-btn desk-btn-primary">← Back to Academic Studio</a>
+    <a href="{% url 'courses:back_course_edit' course.pk %}" class="desk-btn desk-btn-ghost">Edit course</a>
+  </div>
+</div>
+{% elif is_student_view %}
+<div class="manual">
+  <header class="manual-cover reveal-up" style="background:linear-gradient(135deg, {{ course.category.color|default:'#3730a3' }} 0%, #5b5ce2 48%, #0891b2 100%);">
+    <div>
+      <div class="manual-kicker">{% if is_preview %}Student Preview · Academic Manual{% else %}Academic Manual{% endif %}</div>
+      <h1>{{ course.title }}</h1>
+      {% if course.short_description %}<p>{{ course.short_description }}</p>{% endif %}
+      <div class="manual-chips">
+        <span class="manual-chip">{{ course.code }}</span>
+        <span class="manual-chip">{{ course.get_level_display }}</span>
+        {% if course.category %}<span class="manual-chip">{{ course.category.name }}</span>{% endif %}
+        <span class="manual-chip">{{ course.instructor.get_full_name|default:course.instructor.username }}</span>
+      </div>
+    </div>
+    {% if module_progress %}
+    <div class="manual-ring" style="--score: {{ module_progress.percent }}%;" aria-label="Progression {{ module_progress.percent }}%">
+      <strong>{{ module_progress.percent }}%</strong>
+    </div>
+    {% endif %}
+  </header>
+
+  <div class="manual-layout">
+    <article class="manual-main">
+      <section class="manual-section reveal-up" id="overview">
+        <h2><span class="sec-ico" aria-hidden="true">◎</span> Course Overview</h2>
+        <div class="manual-prose">{{ course.description }}</div>
+      </section>
+
+      {% if course.prerequisites %}
+      <section class="manual-section reveal-up">
+        <h2><span class="sec-ico" aria-hidden="true">※</span> Prérequis</h2>
+        <div class="manual-prose">{{ course.prerequisites }}</div>
+      </section>
+      {% endif %}
+
+      <section class="manual-section reveal-up" id="resources">
+        <h2><span class="sec-ico" aria-hidden="true">▣</span> Resources</h2>
+        {% if resource_groups or unassigned_resources %}
+          {% for group in resource_groups %}
+          <div class="preview-chapter">
+            <p class="preview-chapter-title">Chapter · {{ group.title }}</p>
+            <div class="resource-visual-list">
+              {% for r in group.resources %}
+              {% include "courses/partials/resource_visual_row.html" with r=r %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+          {% if unassigned_resources %}
+          <div class="preview-chapter">
+            {% if resource_groups %}<p class="preview-chapter-title">More resources</p>{% endif %}
+            <div class="resource-visual-list">
+              {% for r in unassigned_resources %}
+              {% include "courses/partials/resource_visual_row.html" with r=r %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        {% elif visible_resources %}
+        <div class="resource-visual-list">
+          {% for r in visible_resources %}
+          {% include "courses/partials/resource_visual_row.html" with r=r %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--desk-muted);">Aucune ressource disponible pour votre parcours.</p>
+        {% endif %}
+      </section>
+
+      <section class="manual-section reveal-up" id="quizzes">
+        <h2><span class="sec-ico" aria-hidden="true">✎</span> Quizzes</h2>
+        {% if quiz_cards %}
+          {% for item in quiz_cards %}
+          <div class="manual-quiz {% if is_preview %}preview-quiz-locked{% endif %}">
+            <header>
+              <div>
+                <strong>{{ item.quiz.title }}</strong>
+                <p>
+                  {{ item.quiz.question_count }} question{{ item.quiz.question_count|pluralize }}
+                  · {{ item.quiz.duration_minutes }} min
+                  · seuil {{ item.quiz.passing_score }}%
+                  {% if item.quiz.due_date %} · {{ item.quiz.due_date|date:"d/m/Y H:i" }}{% endif %}
+                </p>
+                {% if item.attempt %}
+                <p>Dernier score : <strong>{{ item.attempt.score }}%</strong>
+                  {% if item.attempt.passed %} · Réussi{% else %} · À retravailler{% endif %}
+                </p>
+                {% endif %}
+              </div>
+              {% if is_preview %}
+              <a href="{% url 'courses:back_quiz_preview' item.quiz.pk %}" class="desk-btn desk-btn-primary">Preview quiz</a>
+              {% else %}
+              <a href="{% url 'courses:front_quiz_take' item.quiz.pk %}" class="desk-btn desk-btn-primary">Passer le quiz</a>
+              {% endif %}
+            </header>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p style="color:var(--desk-muted);">Aucun quiz publié pour ce module.</p>
+        {% endif %}
+      </section>
+
+      {% if related %}
+      <section class="manual-section reveal-up">
+        <h2><span class="sec-ico" aria-hidden="true">→</span> Même département</h2>
+        <div class="academic-grid">
+          {% for c in related %}
+          <a href="{{ c.get_absolute_url }}" class="academic-card">
+            <div class="academic-card-top" style="height:80px;background:linear-gradient(135deg, {{ c.category.color|default:'#5b5ce2' }}, #06b6d4);"></div>
+            <div class="academic-card-body">
+              <h3>{{ c.title }}</h3>
+              <div class="academic-card-foot">
+                <span>{{ c.code }}</span>
+                <span class="academic-card-cta">Open →</span>
+              </div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </article>
+
+    <aside class="manual-aside reveal-up">
+      <h3>Fiche module</h3>
+      <div class="manual-row"><span>Enseignant</span><strong>{{ course.instructor.get_full_name|default:course.instructor.username }}</strong></div>
+      <div class="manual-row"><span>Parcours</span><strong>{{ course.get_level_display }}</strong></div>
+      <div class="manual-row"><span>Volume</span><strong>{{ course.duration_hours }} h</strong></div>
+      <div class="manual-row"><span>Ressources</span><strong>{{ visible_resources|length }}</strong></div>
+      <div class="manual-row"><span>Quiz</span><strong>{{ published_quizzes|length }}</strong></div>
+      {% if is_preview %}
+      <p style="margin:1rem 0 0;color:#047857;font-weight:650;font-size:0.9rem;">Preview · enrolled student view</p>
+      {% elif enrolled %}
+      <p style="margin:1rem 0 0;color:#047857;font-weight:650;font-size:0.9rem;">Affecté à votre parcours</p>
+      {% else %}
+      <form method="post" action="{% url 'courses:front_enroll' course.slug %}" style="margin-top:1rem;">
+        {% csrf_token %}
+        <button type="submit" class="desk-btn desk-btn-primary" style="width:100%;">Ajouter à mon parcours</button>
+      </form>
+      {% endif %}
+      {% if module_progress %}
+      <div class="academic-card-progress" style="margin-top:1rem;">
+        <header><span>{{ module_progress.label }}</span><span>{{ module_progress.percent }}%</span></header>
+        <div class="track"><div class="fill" data-width="{{ module_progress.percent }}" style="width:{{ module_progress.percent }}%"></div></div>
+      </div>
+      <small style="color:var(--desk-muted);display:block;margin-top:0.4rem;">{{ module_progress.quizzes_passed }}/{{ module_progress.quiz_count }} quiz réussis</small>
+      {% endif %}
+      {% if is_preview %}
+      <a href="{% url 'courses:back_course_detail' course.pk %}" class="desk-btn desk-btn-primary" style="width:100%;margin-top:1rem;">← Back to Academic Studio</a>
+      <a href="{% url 'courses:back_course_builder' course.pk %}" class="desk-btn desk-btn-ghost" style="width:100%;margin-top:0.5rem;">Course Builder</a>
+      {% else %}
+      <a href="{% url 'courses:front_catalog' %}" class="desk-btn desk-btn-ghost" style="width:100%;margin-top:1rem;">← Modules</a>
+      <a href="{% url 'courses:student_dashboard' %}" class="desk-btn desk-btn-ghost" style="width:100%;margin-top:0.5rem;">Mon bureau</a>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% else %}
+{# Non-étudiant : présentation classique préservée #}
+<section class="detail-hero" style="padding-top:0;">
+  <div class="container">
+    <div class="module-banner glass-panel reveal" style="background:linear-gradient(135deg, {{ course.category.color|default:'#3b5bdb' }}dd, #1e3a8acc 55%, #845ef7aa);color:#fff;margin-bottom:1.5rem;">
+      <div>
+        <div class="course-meta" style="margin-bottom:0.6rem;">
+          <span class="chip" style="background:rgba(255,255,255,.2);color:#fff;">{{ course.code }}</span>
+          <span class="chip" style="background:rgba(255,255,255,.15);color:#fff;">{{ course.get_level_display }}</span>
+          {% if course.category %}<span class="chip" style="background:rgba(255,255,255,.12);color:#fff;">{{ course.category.name }}</span>{% endif %}
+        </div>
+        <h1 style="color:#fff;margin:0;">{{ course.title }}</h1>
+        {% if course.short_description %}
+        <p style="opacity:.85;margin:0.6rem 0 0;max-width:40rem;">{{ course.short_description }}</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="detail-layout">
+      <article class="detail-main reveal">
+        <h2 class="detail-section-title">À propos</h2>
+        <div style="white-space:pre-line;">{{ course.description }}</div>
+        {% if course.prerequisites %}
+        <h2 class="detail-section-title">Prérequis</h2>
+        <div class="prereq-row" style="white-space:pre-line;">{{ course.prerequisites }}</div>
+        {% endif %}
+        <h2 class="detail-section-title">Ressources pédagogiques</h2>
+        {% if visible_resources %}
+        <ul class="resource-list">
+          {% for r in visible_resources %}
+          <li class="resource-item">
+            <div class="resource-icon">{{ r.type_icon }}</div>
+            <div style="flex:1;">
+              <strong>{{ r.title }}</strong>
+              <small>{{ r.get_resource_type_display }}</small>
+            </div>
+            {% if r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Ouvrir</a>
+            {% elif r.file %}<a href="{{ r.file.url }}" target="_blank" class="btn btn-sm btn-secondary">Télécharger</a>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:var(--slate);">Aucune ressource.</p>
+        {% endif %}
+        <h2 class="detail-section-title">Quiz</h2>
+        {% for item in quiz_cards %}
+        <div class="quiz-card">
+          <strong>{{ item.quiz.title }}</strong>
+          {% if is_teacher %}<span class="chip">Réservé aux étudiants</span>
+          {% else %}<a href="{% url 'login' %}" class="btn btn-secondary btn-sm">Connexion étudiant</a>{% endif %}
+        </div>
+        {% empty %}
+        <p style="color:var(--slate);">Aucun quiz publié.</p>
+        {% endfor %}
+      </article>
+      <aside class="detail-sidebar reveal">
+        <div class="info-card">
+          <h3>Fiche module</h3>
+          <div class="info-row"><span>Responsable</span><strong>{{ course.instructor.get_full_name|default:course.instructor.username }}</strong></div>
+          <div class="info-row"><span>Volume</span><strong>{{ course.duration_hours }} h</strong></div>
+        </div>
+        <a href="{% url 'courses:front_catalog' %}" class="btn btn-secondary" style="width:100%;">← Retour</a>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if is_student_view %}
+<script src="{% static 'js/academic-desk.js' %}"></script>
+{% endif %}
+{% endblock %}

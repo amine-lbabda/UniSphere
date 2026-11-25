@@ -1,0 +1,94 @@
+{% extends "layouts/app_shell.html" %}
+{% load static %}
+{% block body_class %}space-student{% endblock %}
+{% block space_label %}Digital Student Desk{% endblock %}
+{% block brand_url %}{% url 'courses:student_dashboard' %}{% endblock %}
+
+{% block pre_shell %}
+<div class="living-bg" aria-hidden="true">
+  <span class="b1"></span><span class="b2"></span><span class="b3"></span>
+</div>
+<button type="button" class="desk-nav-backdrop" id="desk-nav-backdrop" aria-label="Fermer le menu"></button>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/academic-desk.css' %}">
+<link rel="stylesheet" href="{% static 'css/book.css' %}">
+<link rel="stylesheet" href="{% static 'css/courses.css' %}">
+<link rel="stylesheet" href="{% static 'css/resources.css' %}">
+<link rel="stylesheet" href="{% static 'css/animations.css' %}">
+<link rel="stylesheet" href="{% static 'css/themes.css' %}">
+{% block desk_css %}{% endblock %}
+{% endblock %}
+
+{% block nav_toggle %}
+<button type="button" class="desk-nav-toggle" id="desk-nav-toggle" aria-controls="app-sidebar" aria-expanded="false" aria-label="Ouvrir le menu">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>
+{% endblock %}
+
+{% block sidebar %}
+<a href="{% url 'courses:student_dashboard' %}" class="{% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"/></svg></span>
+  Home
+</a>
+<a href="{% url 'courses:student_charts' %}" class="{% if request.resolver_match.url_name == 'student_charts' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v-4"/><path d="M12 15V7"/><path d="M16 15v-6"/></svg></span>
+  Dashboard
+</a>
+<a href="{% url 'courses:front_catalog' %}" class="{% if request.resolver_match.url_name == 'front_catalog' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span>
+  Courses
+</a>
+<a href="{% url 'courses:student_resources' %}" class="{% if request.resolver_match.url_name == 'student_resources' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg></span>
+  Resources
+</a>
+<a href="{% url 'courses:student_quizzes' %}" class="{% if request.resolver_match.url_name == 'student_quizzes' or request.resolver_match.url_name == 'front_quiz_take' or request.resolver_match.url_name == 'front_quiz_result' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6"/><path d="m9 14 2 2 4-4"/></svg></span>
+  Quizzes
+</a>
+<a href="{% url 'courses:student_results' %}" class="{% if request.resolver_match.url_name == 'student_results' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-3"/></svg></span>
+  Progress
+</a>
+<a href="{% url 'courses:front_notifications' %}" class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 7H3s3 0 3-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></span>
+  Alerts
+  {% if unread_notifications %}<span class="side-badge">{{ unread_notifications }}</span>{% endif %}
+</a>
+<div class="side-divider" aria-hidden="true"></div>
+<a href="{% url 'courses:profile_edit' %}" class="{% if request.resolver_match.url_name == 'profile_edit' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></span>
+  Settings
+</a>
+<a href="{% url 'courses:profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+  <span class="nav-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0"/></svg></span>
+  Profile
+</a>
+{% endblock %}
+
+{% block top_actions %}
+<form class="desk-search" action="{% url 'courses:front_catalog' %}" method="get" role="search">
+  <input type="search" name="q" placeholder="Rechercher un module…" aria-label="Rechercher">
+</form>
+<button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+  <span aria-hidden="true">🌙</span> Study Mode
+</button>
+<a href="{% url 'courses:student_quizzes' %}" class="app-icon-btn desk-top-link" title="Quizzes">Quiz</a>
+<a href="{% url 'courses:profile' %}" class="desk-avatar-link" title="Profil">
+  <span class="desk-avatar">{{ user.username|slice:":1"|upper }}</span>
+</a>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% static 'js/desk.js' %}"></script>
+<script src="{% static 'js/transitions.js' %}"></script>
+<script src="{% static 'js/academic-desk.js' %}"></script>
+<script src="{% static 'js/interactions.js' %}"></script>
+{% block desk_js %}{% endblock %}
+{% endblock %}

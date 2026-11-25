@@ -1,0 +1,30 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Departments — Control Center{% endblock %}
+{% block page_title %}Departments{% endblock %}
+{% block page_sub %}Categories and study tracks{% endblock %}
+
+{% block content %}
+<form method="post" class="form-card reveal" style="margin-bottom:1.5rem;max-width:520px;">
+  {% csrf_token %}
+  <div class="form-row">
+    <div class="form-group"><label>Name</label><input name="name" class="form-control" required placeholder="e.g. Civil engineering"></div>
+    <div class="form-group"><label>Color</label><input type="color" name="color" class="form-control" value="#845ef7" style="height:42px;padding:0.25rem;"></div>
+  </div>
+  <button class="btn btn-primary" type="submit">Add</button>
+</form>
+
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead><tr><th>Name</th><th>Color</th><th>Courses</th></tr></thead>
+    <tbody>
+      {% for c in categories %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td><span class="cat-dot" style="background:{{ c.color }};display:inline-block;"></span> {{ c.color }}</td>
+        <td>{{ c.course_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

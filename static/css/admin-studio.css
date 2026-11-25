@@ -1,0 +1,97 @@
+/* UniSphere — Academic Control Center (admin shell overrides) */
+
+.space-admin {
+  --studio-primary: #845ef7;
+  --studio-secondary: #9b5de5;
+  --studio-accent: #c084fc;
+}
+
+.space-admin .app-sidebar {
+  background: linear-gradient(180deg, #1a1028 0%, #3b1d6e 50%, #5b2d9e 100%);
+}
+
+.space-admin .studio-eyebrow {
+  color: #c4b5fd;
+}
+
+.space-admin .btn-primary,
+.space-admin .btn-glow {
+  background: linear-gradient(135deg, #845ef7, #6d28d9);
+  border-color: transparent;
+}
+
+.space-admin .studio-kpi[data-accent="courses"] { --kpi-accent: #845ef7; }
+.space-admin .studio-kpi[data-accent="students"] { --kpi-accent: #a78bfa; }
+.space-admin .studio-kpi[data-accent="resources"] { --kpi-accent: #c084fc; }
+.space-admin .studio-kpi[data-accent="quizzes"] { --kpi-accent: #7c3aed; }
+
+.space-admin .studio-chip.is-on,
+.space-admin .reslib-chip.is-on,
+.space-admin .qz-chip.is-on {
+  background: rgba(132, 94, 247, 0.16);
+  border-color: rgba(132, 94, 247, 0.4);
+  color: #5b21b6;
+}
+
+.space-admin .user-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 1.1rem;
+  padding: 0.85rem 1rem;
+  background: var(--studio-card, #fff);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  border-radius: 16px;
+}
+
+.space-admin .user-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.space-admin .ml-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.space-admin .user-table-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.space-admin .admin-course-instructor {
+  font-size: 0.78rem;
+  color: var(--studio-muted, #64748b);
+  margin-top: 0.15rem;
+}
+
+.space-admin.theme-study .app-sidebar {
+  background: linear-gradient(180deg, #0b0614 0%, #1a1028 55%, #2e1065 100%);
+}
+
+.space-admin.theme-study .studio-chip.is-on,
+.space-admin.theme-study .reslib-chip.is-on,
+.space-admin.theme-study .qz-chip.is-on {
+  background: rgba(167, 139, 250, 0.18);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: #e9d5ff;
+}
+
+.space-admin.theme-study .user-toolbar {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+}

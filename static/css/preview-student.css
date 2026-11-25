@@ -1,0 +1,91 @@
+/* Academic Studio — Preview as Student shell */
+
+.preview-mode .preview-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: linear-gradient(135deg, #4338ca, #06b6d4);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(67, 56, 202, 0.28);
+}
+.preview-sticky-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.preview-sticky-inner strong {
+  display: block;
+  font-size: 0.95rem;
+}
+.preview-sticky-inner span {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.92;
+  margin-top: 0.1rem;
+}
+.preview-sticky-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.preview-mode .app-topbar {
+  top: 0;
+}
+
+.preview-unavailable {
+  max-width: 640px;
+  margin: 2rem auto;
+  text-align: center;
+  background: #fff;
+  border-radius: 20px;
+  padding: 2rem 1.5rem;
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+.preview-unavailable .icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+.preview-unavailable h2 {
+  margin: 0 0 0.5rem;
+  font-family: "Fraunces", Georgia, serif;
+}
+.preview-unavailable p {
+  color: #64748b;
+  margin: 0 0 1rem;
+}
+.preview-chapter {
+  margin-bottom: 1.1rem;
+}
+.preview-chapter-title {
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5b5ce2;
+  margin: 0 0 0.55rem;
+}
+.preview-quiz-locked {
+  opacity: 0.85;
+}
+.preview-quiz-locked .desk-btn {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.space-student.theme-study .preview-unavailable {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .preview-sticky-inner {
+    padding: 0.7rem 1rem;
+  }
+}

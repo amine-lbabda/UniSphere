@@ -1,0 +1,247 @@
+/* Academic Studio — Phase 9 polish (toasts, empty, loading, motion, a11y) */
+
+.space-teacher .toast-stack, .space-admin .toast-stack {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 140;
+  display: grid;
+  gap: 0.55rem;
+  max-width: min(380px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.space-teacher .toast, .space-admin .toast {
+  pointer-events: auto;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 14px;
+  padding: 0.9rem 1.05rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+  font-size: 0.9rem;
+  font-weight: 550;
+  line-height: 1.35;
+  animation: studioToastIn 0.28s ease;
+  border-left: 4px solid transparent;
+}
+.space-teacher .toast.ok, .space-admin .toast.ok {
+  background: linear-gradient(135deg, #065f46, #0f766e);
+  border-left-color: #6ee7b7;
+}
+.space-teacher .toast.warn, .space-admin .toast.warn {
+  background: linear-gradient(135deg, #92400e, #b45309);
+  border-left-color: #fcd34d;
+}
+.space-teacher .toast.err, .space-admin .toast.err {
+  background: linear-gradient(135deg, #9f1239, #be123c);
+  border-left-color: #fda4af;
+}
+@keyframes studioToastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.space-teacher .app-messages, .space-admin .app-messages {
+  /* Converted to toasts by JS; keep as fallback if JS off */
+}
+
+.space-teacher .empty-state, .space-admin .empty-state {
+  text-align: center;
+  padding: 2.75rem 1.5rem;
+  background: var(--studio-card, #fff);
+  border: 1px dashed rgba(30, 41, 59, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+  max-width: 520px;
+  margin: 1.5rem auto;
+}
+.space-teacher .empty-state .icon, .space-admin .empty-state .icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+}
+.space-teacher .empty-state p, .space-admin .empty-state p {
+  margin: 0.25rem 0;
+  color: var(--studio-muted, #64748b);
+}
+.space-teacher .empty-state p strong, .space-admin .empty-state p strong {
+  display: block;
+  color: var(--studio-text, #1e293b);
+  font-size: 1.1rem;
+  font-family: var(--studio-display, Georgia, serif);
+  margin-bottom: 0.25rem;
+}
+
+.space-teacher .is-loading, .space-admin .is-loading,
+.space-teacher .btn.is-loading, .space-admin .btn.is-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.72;
+}
+.space-teacher .btn.is-loading::after, .space-admin .btn.is-loading::after {
+  content: "";
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-left: 0.45rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: -2px;
+  animation: studioSpin 0.7s linear infinite;
+}
+.space-teacher .btn-secondary.is-loading::after, .space-admin .btn-secondary.is-loading::after,
+.space-teacher .btn-ghost.is-loading::after, .space-admin .btn-ghost.is-loading::after {
+  border-color: rgba(91, 92, 226, 0.25);
+  border-top-color: #5b5ce2;
+}
+@keyframes studioSpin {
+  to { transform: rotate(360deg); }
+}
+
+.space-teacher .studio-skeleton, .space-admin .studio-skeleton {
+  background: linear-gradient(90deg, #eef2ff 25%, #f8fafc 37%, #eef2ff 63%);
+  background-size: 400% 100%;
+  animation: studioShimmer 1.2s ease infinite;
+  border-radius: 12px;
+  min-height: 1rem;
+}
+@keyframes studioShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+.space-teacher .reveal, .space-admin .reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.space-teacher .reveal.visible, .space-admin .reveal.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.space-teacher a:focus-visible, .space-admin a:focus-visible,
+.space-teacher button:focus-visible, .space-admin button:focus-visible,
+.space-teacher input:focus-visible, .space-admin input:focus-visible,
+.space-teacher select:focus-visible, .space-admin select:focus-visible,
+.space-teacher textarea:focus-visible, .space-admin textarea:focus-visible,
+.space-teacher .studio-chip:focus-visible, .space-admin .studio-chip:focus-visible,
+.space-teacher .theme-toggle:focus-visible, .space-admin .theme-toggle:focus-visible {
+  outline: 2px solid #5b5ce2;
+  outline-offset: 2px;
+}
+
+.space-teacher .table-wrap, .space-admin .table-wrap,
+.space-teacher .form-card, .space-admin .form-card,
+.space-teacher .info-card, .space-admin .info-card,
+.space-teacher .mod-kpi-card, .space-admin .mod-kpi-card,
+.space-teacher .data-table, .space-admin .data-table {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Students overview polish */
+.studio-students-table .progress-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.studio-students-table .progress-mini .track {
+  flex: 1;
+  height: 7px;
+  border-radius: 99px;
+  background: #e2e8f0;
+  overflow: hidden;
+  min-width: 64px;
+}
+.studio-students-table .progress-mini .fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #5b5ce2, #06b6d4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-teacher .toast, .space-admin .toast,
+  .space-teacher .reveal, .space-admin .reveal,
+  .space-teacher .btn.is-loading::after, .space-admin .btn.is-loading::after,
+  .space-teacher .studio-skeleton, .space-admin .studio-skeleton {
+    animation: none !important;
+    transition: none !important;
+  }
+  .space-teacher .reveal, .space-admin .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Study Mode expansions */
+.space-teacher.theme-study .empty-state, .space-admin.theme-study .empty-state,
+.space-teacher.theme-study .table-wrap, .space-admin.theme-study .table-wrap,
+.space-teacher.theme-study .form-card, .space-admin.theme-study .form-card,
+.space-teacher.theme-study .info-card, .space-admin.theme-study .info-card,
+.space-teacher.theme-study .mod-hero, .space-admin.theme-study .mod-hero,
+.space-teacher.theme-study .mod-kpi-card, .space-admin.theme-study .mod-kpi-card,
+.space-teacher.theme-study .res-modal, .space-admin.theme-study .res-modal,
+.space-teacher.theme-study .builder-book, .space-admin.theme-study .builder-book,
+.space-teacher.theme-study .builder-hero, .space-admin.theme-study .builder-hero,
+.space-teacher.theme-study .builder-chapter, .space-admin.theme-study .builder-chapter,
+.space-teacher.theme-study .builder-item, .space-admin.theme-study .builder-item,
+.space-teacher.theme-study .studio-form-section, .space-admin.theme-study .studio-form-section,
+.space-teacher.theme-study .res-upload-section, .space-admin.theme-study .res-upload-section,
+.space-teacher.theme-study .qz-detail-hero, .space-admin.theme-study .qz-detail-hero,
+.space-teacher.theme-study .an-hero, .space-admin.theme-study .an-hero {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .empty-state p strong, .space-admin.theme-study .empty-state p strong,
+.space-teacher.theme-study .app-page-title, .space-admin.theme-study .app-page-title {
+  color: #f8fafc;
+}
+.space-teacher.theme-study .data-table th, .space-admin.theme-study .data-table th,
+.space-teacher.theme-study .data-table td, .space-admin.theme-study .data-table td,
+.space-teacher.theme-study .studio-table th, .space-admin.theme-study .studio-table th,
+.space-teacher.theme-study .studio-table td, .space-admin.theme-study .studio-table td,
+.space-teacher.theme-study .an-table th, .space-admin.theme-study .an-table th,
+.space-teacher.theme-study .an-table td, .space-admin.theme-study .an-table td {
+  border-color: rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .form-control, .space-admin.theme-study .form-control,
+.space-teacher.theme-study input, .space-admin.theme-study input,
+.space-teacher.theme-study select, .space-admin.theme-study select,
+.space-teacher.theme-study textarea, .space-admin.theme-study textarea {
+  background: #0b1220;
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .dropzone, .space-admin.theme-study .dropzone,
+.space-teacher.theme-study .builder-unassigned, .space-admin.theme-study .builder-unassigned,
+.space-teacher.theme-study .builder-chapter-head, .space-admin.theme-study .builder-chapter-head,
+.space-teacher.theme-study .qz-metric, .space-admin.theme-study .qz-metric,
+.space-teacher.theme-study .qz-detail-kpi, .space-admin.theme-study .qz-detail-kpi,
+.space-teacher.theme-study .studio-course-fact, .space-admin.theme-study .studio-course-fact {
+  background: #0b1220;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+.space-teacher.theme-study .studio-skeleton, .space-admin.theme-study .studio-skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #0f172a 37%, #1e293b 63%);
+  background-size: 400% 100%;
+}
+.space-teacher.theme-study .progress-mini .track, .space-admin.theme-study .progress-mini .track,
+.space-teacher.theme-study .an-bar-track, .space-admin.theme-study .an-bar-track,
+.space-teacher.theme-study .studio-course-progress-bar, .space-admin.theme-study .studio-course-progress-bar {
+  background: #0b1220;
+}
+.space-teacher.theme-study .app-user-chip, .space-admin.theme-study .app-user-chip,
+.space-teacher.theme-study .app-side-foot, .space-admin.theme-study .app-side-foot {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+.space-teacher.theme-study .btn-secondary, .space-admin.theme-study .btn-secondary {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}
+.space-teacher.theme-study .btn-ghost, .space-admin.theme-study .btn-ghost {
+  color: #cbd5e1;
+}

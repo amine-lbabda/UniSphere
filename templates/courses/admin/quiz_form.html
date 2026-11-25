@@ -1,0 +1,53 @@
+{% extends "layouts/admin.html" %}
+{% block title %}{{ title }} — Console{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Gestion globale des quiz{% endblock %}
+
+{% block content %}
+<form method="post" class="form-card reveal">
+  {% csrf_token %}
+
+  <div class="form-group">
+    <label for="{{ form.course.id_for_label }}">Module</label>
+    {{ form.course }}
+    {{ form.course.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.title.id_for_label }}">Titre</label>
+    {{ form.title }}
+    {{ form.title.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.description.id_for_label }}">Description</label>
+    {{ form.description }}
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="{{ form.duration_minutes.id_for_label }}">Durée (minutes)</label>
+      {{ form.duration_minutes }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.passing_score.id_for_label }}">Seuil de réussite (%)</label>
+      {{ form.passing_score }}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.due_date.id_for_label }}">Échéance</label>
+    {{ form.due_date }}
+  </div>
+
+  <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+    {{ form.is_published }}
+    <label for="{{ form.is_published.id_for_label }}" style="margin:0;">Quiz publié</label>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">{% if mode == "create" %}Créer{% else %}Enregistrer{% endif %}</button>
+    <a href="{% if quiz %}{% url 'courses:admin_quiz_detail' quiz.pk %}{% else %}{% url 'courses:admin_quizzes' %}{% endif %}" class="btn btn-secondary">Annuler</a>
+  </div>
+</form>
+{% endblock %}

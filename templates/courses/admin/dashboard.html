@@ -1,0 +1,171 @@
+{% extends "layouts/admin.html" %}
+{% load static %}
+{% block title %}Control Center — UniSphere{% endblock %}
+{% block page_title %}Control Center{% endblock %}
+{% block page_sub %}Platform-wide overview · users, courses and activity{% endblock %}
+{% block admin_actions %}
+<a href="{% url 'courses:admin_user_create' %}" class="btn btn-secondary btn-sm">+ User</a>
+<a href="{% url 'courses:admin_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ Course</a>
+{% endblock %}
+
+{% block content %}
+<header class="studio-hero reveal">
+  <p class="studio-eyebrow">UniSphere · Academic Control Center</p>
+  <h2 class="studio-greeting">{{ greeting }}, {{ request.user.get_full_name|default:request.user.username }} 👋</h2>
+  <p class="studio-lead">Oversee users · courses · resources · quizzes · enrollments</p>
+</header>
+
+<section class="studio-kpi-row" aria-label="Platform metrics">
+  <article class="studio-kpi reveal" data-accent="students" data-tilt>
+    <span class="studio-kpi-label">Users</span>
+    <span class="studio-kpi-value" data-count="{{ kpi.users }}">0</span>
+    <span class="studio-kpi-hint">Platform accounts</span>
+  </article>
+  <article class="studio-kpi reveal" data-accent="courses" data-tilt>
+    <span class="studio-kpi-label">Courses</span>
+    <span class="studio-kpi-value" data-count="{{ kpi.courses }}">0</span>
+    <span class="studio-kpi-hint">{{ kpi.published }} published · {{ kpi.drafts }} draft</span>
+  </article>
+  <article class="studio-kpi reveal" data-accent="resources" data-tilt>
+    <span class="studio-kpi-label">Enrollments</span>
+    <span class="studio-kpi-value" data-count="{{ kpi.enrollments }}">0</span>
+    <span class="studio-kpi-hint">{{ kpi.resources }} resources · {{ kpi.quizzes }} quizzes</span>
+  </article>
+  <article class="studio-kpi reveal" data-accent="quizzes" data-tilt>
+    <span class="studio-kpi-label">Avg score</span>
+    <span class="studio-kpi-value">{{ kpi.avg_score }}%</span>
+    <span class="studio-kpi-hint">{{ kpi.attempts }} quiz attempts</span>
+  </article>
+</section>
+
+<div class="studio-dash">
+  <section class="studio-panel studio-attention studio-span-12 reveal" aria-labelledby="attention-title">
+    <div class="studio-attention-head">
+      <h3 id="attention-title"><span aria-hidden="true">⚠️</span> Needs attention</h3>
+      {% if attention_items %}
+      <span class="studio-attention-count">{{ attention_items|length }} item{{ attention_items|length|pluralize }}</span>
+      {% endif %}
+    </div>
+    {% if attention_items %}
+    <ul class="studio-attention-list">
+      {% for item in attention_items %}
+      <li>
+        <a href="{{ item.url }}" data-tone="{{ item.tone }}">
+          <span class="studio-attention-ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="studio-attention-text">
+            <strong>{{ item.title }}</strong>
+            {% if item.detail %}<span>{{ item.detail }}</span>{% endif %}
+          </span>
+          <span class="studio-attention-arrow" aria-hidden="true">→</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="studio-attention-empty">✓ Platform looks healthy — nothing urgent.</p>
+    {% endif %}
+  </section>
+
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Roles</h3>
+    <div class="chart-wrap"><canvas id="chartRoles" aria-label="Role distribution"></canvas></div>
+  </section>
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Course status</h3>
+    <div class="chart-wrap"><canvas id="chartStatus" aria-label="Course status"></canvas></div>
+  </section>
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Quiz pass / fail</h3>
+    <div class="chart-wrap"><canvas id="chartPass" aria-label="Quiz pass fail"></canvas></div>
+  </section>
+
+  <section class="studio-panel studio-span-8 reveal">
+    <h3>Platform activity (14 days)</h3>
+    <div class="chart-wrap"><canvas id="chartActivity" aria-label="Activity line chart"></canvas></div>
+  </section>
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Published by level</h3>
+    <div class="chart-wrap"><canvas id="chartLevels" aria-label="Courses by level"></canvas></div>
+  </section>
+
+  <section class="studio-panel studio-span-6 reveal">
+    <h3>By department</h3>
+    <div class="chart-wrap"><canvas id="chartCats" aria-label="Courses by department"></canvas></div>
+  </section>
+  <section class="studio-panel studio-span-6 reveal">
+    <h3>Recent attempts</h3>
+    <div class="table-wrap" style="border:0;box-shadow:none;">
+      <table class="data-table table-compact">
+        <thead><tr><th>Student</th><th>Quiz</th><th>Score</th></tr></thead>
+        <tbody>
+          {% for a in recent_attempts %}
+          <tr>
+            <td>{{ a.student.username }}</td>
+            <td>{{ a.quiz.course.code }}</td>
+            <td><strong>{{ a.score }}%</strong></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3">No attempts yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="studio-panel studio-span-6 reveal">
+    <h3>Recent users</h3>
+    <div class="table-wrap" style="border:0;box-shadow:none;">
+      <table class="data-table table-compact">
+        <thead><tr><th>User</th><th>Role</th><th></th></tr></thead>
+        <tbody>
+          {% for u in recent_users %}
+          <tr>
+            <td>{{ u.username }}</td>
+            <td>{% if u.profile %}{{ u.profile.get_role_display }}{% endif %}</td>
+            <td><a href="{% url 'courses:admin_user_edit' u.pk %}" class="btn btn-sm btn-ghost">Edit</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="studio-panel studio-span-6 reveal">
+    <h3>Recent courses</h3>
+    <div class="table-wrap" style="border:0;box-shadow:none;">
+      <table class="data-table table-compact">
+        <thead><tr><th>Code</th><th>Teacher</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for c in recent_courses %}
+          <tr>
+            <td>{{ c.code }}</td>
+            <td>{{ c.instructor.username }}</td>
+            <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script id="raw-roles" type="application/json">{{ chart_roles|safe }}</script>
+<script id="raw-status" type="application/json">{{ chart_status|safe }}</script>
+<script id="raw-pass" type="application/json">{{ chart_pass|safe }}</script>
+<script id="raw-activity" type="application/json">{{ chart_activity|safe }}</script>
+<script id="raw-levels" type="application/json">{{ chart_levels|safe }}</script>
+<script id="raw-cats" type="application/json">{{ chart_categories|safe }}</script>
+{% endblock %}
+
+{% block admin_js %}
+<script src="{% static 'js/charts.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  UniCharts.doughnut("chartRoles", "raw-roles");
+  UniCharts.doughnut("chartStatus", "raw-status");
+  UniCharts.doughnut("chartPass", "raw-pass");
+  UniCharts.line("chartActivity", "raw-activity", { color: "#845ef7", fill: "rgba(132,94,247,0.12)" });
+  UniCharts.bar("chartLevels", "raw-levels", { color: "rgba(167,139,250,0.85)" });
+  UniCharts.bar("chartCats", "raw-cats", { color: "rgba(109,40,217,0.8)" });
+});
+</script>
+{% endblock %}

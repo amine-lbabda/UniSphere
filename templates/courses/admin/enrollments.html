@@ -1,0 +1,36 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Enrollments — Control Center{% endblock %}
+{% block page_title %}Enrollments{% endblock %}
+{% block page_sub %}Student ↔ course assignments{% endblock %}
+
+{% block content %}
+{% if enrollments %}
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead><tr><th>Student</th><th>Course</th><th>Teacher</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+      {% for e in enrollments %}
+      <tr>
+        <td>{{ e.student.get_full_name|default:e.student.username }}</td>
+        <td><span class="chip">{{ e.course.code }}</span> {{ e.course.title }}</td>
+        <td>{{ e.course.instructor.get_full_name|default:e.course.instructor.username }}</td>
+        <td>{{ e.enrolled_at|date:"d/m/Y" }}</td>
+        <td>
+          <form method="post" action="{% url 'courses:admin_enrollment_delete' e.pk %}" data-confirm="Remove this enrollment?">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state reveal">
+  <div class="icon">🔗</div>
+  <p><strong>No enrollments yet.</strong></p>
+  <p>When students join courses, they will appear here.</p>
+</div>
+{% endif %}
+{% endblock %}

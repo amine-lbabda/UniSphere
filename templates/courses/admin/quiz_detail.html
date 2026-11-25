@@ -1,0 +1,79 @@
+{% extends "layouts/admin.html" %}
+{% block title %}{{ quiz.title }} — Console{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_sub %}{{ course.code }} · {{ course.instructor.get_full_name|default:course.instructor.username }} · seuil {{ quiz.passing_score }}% · {% if quiz.is_published %}Publié{% else %}Brouillon{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:1.25rem;">
+  <div></div>
+  <div class="actions">
+    <a href="{% url 'courses:admin_quiz_edit' quiz.pk %}" class="btn btn-secondary">Modifier</a>
+    <a href="{% url 'courses:admin_question_create' quiz.pk %}" class="btn btn-primary">+ Question</a>
+    <a href="{% url 'courses:admin_quizzes' %}" class="btn btn-ghost">Liste</a>
+  </div>
+</div>
+
+{% if quiz.description %}
+<p class="reveal" style="color:var(--slate);margin-bottom:1.5rem;">{{ quiz.description }}</p>
+{% endif %}
+
+{% if quiz.questions.all %}
+<div class="reveal" style="display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem;">
+  {% for q in quiz.questions.all %}
+  <div class="quiz-question">
+    <div style="display:flex;justify-content:space-between;gap:1rem;align-items:start;">
+      <h3>Q{{ forloop.counter }}. {{ q.text }} <span style="color:var(--slate);font-weight:500;font-size:0.85rem;">({{ q.points }} pt)</span></h3>
+      <form method="post" action="{% url 'courses:admin_question_delete' q.pk %}" data-confirm="Supprimer cette question ?">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+      </form>
+    </div>
+    <ul style="margin:0;padding-left:1.2rem;">
+      {% for c in q.choices.all %}
+      <li {% if c.is_correct %}style="color:var(--teal);font-weight:600;"{% endif %}>
+        {{ c.text }}{% if c.is_correct %} ✓{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="icon">❓</div>
+  <p>Ajoutez des questions à choix multiples.</p>
+</div>
+{% endif %}
+
+<div class="page-header">
+  <div>
+    <h1 style="font-size:1.3rem;">Tentatives étudiants</h1>
+    <p>{{ quiz.attempts.count }} tentative{{ quiz.attempts.count|pluralize }}</p>
+  </div>
+</div>
+
+{% if quiz.attempts.all %}
+<div class="table-wrap reveal">
+  <table class="data-table">
+    <thead>
+      <tr><th>Étudiant</th><th>Score</th><th>Résultat</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+      {% for a in quiz.attempts.all %}
+      <tr>
+        <td>{{ a.student.get_full_name|default:a.student.username }}</td>
+        <td>{{ a.score }}%</td>
+        <td>{% if a.passed %}<span class="badge badge-published">Réussi</span>{% else %}<span class="badge badge-archived">Échoué</span>{% endif %}</td>
+        <td>{{ a.completed_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'courses:admin_quiz_delete' quiz.pk %}" data-confirm="Supprimer ce quiz et toutes ses questions ?" style="margin-top:2rem;">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Supprimer le quiz</button>
+</form>
+{% endblock %}

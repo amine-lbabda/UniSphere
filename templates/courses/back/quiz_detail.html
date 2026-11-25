@@ -1,0 +1,201 @@
+﻿{% extends "layouts/teacher.html" %}
+{% load static %}
+{% block title %}{{ quiz.title }} — Quiz Center{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_sub %}{{ course.code }} · Quiz Center{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_quiz_preview' quiz.pk %}" class="btn btn-primary btn-sm">Preview as student</a>
+<a href="{% url 'courses:back_quizzes' %}" class="btn btn-ghost btn-sm">Quiz Center</a>
+{% endblock %}
+
+{% block teacher_css %}
+<link rel="stylesheet" href="{% static 'css/studio-quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<header class="qz-detail-hero reveal">
+  <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;">
+    <div>
+      <p class="studio-eyebrow" style="margin:0;">🧠 Quiz Center</p>
+      <h2>{{ quiz.title }}</h2>
+      <p style="margin:0;color:var(--studio-muted);">
+        {{ course.code }} — {{ course.title }}
+        · {{ quiz.duration_minutes }} min
+        · pass {{ quiz.passing_score }}%
+        {% if quiz.due_date %} · due {{ quiz.due_date|date:"d/m/Y H:i" }}{% endif %}
+      </p>
+    </div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+      <span class="studio-state" data-state="{% if quiz.is_published %}published{% else %}draft{% endif %}" id="quiz-pub-state">
+        {% if quiz.is_published %}Published{% else %}Draft{% endif %}
+      </span>
+      <button
+        type="button"
+        class="btn btn-sm btn-secondary"
+        data-toggle-publish="{% url 'courses:back_quiz_toggle_publish' quiz.pk %}"
+        id="quiz-pub-btn"
+      >
+        {% if quiz.is_published %}Unpublish{% else %}Publish{% endif %}
+      </button>
+      <a href="{% url 'courses:back_quiz_edit' quiz.pk %}" class="btn btn-sm btn-ghost">Edit</a>
+      <a href="{% url 'courses:back_question_create' quiz.pk %}" class="btn btn-sm btn-primary">+ Question</a>
+    </div>
+  </div>
+  {% if quiz.description %}
+  <p style="margin:0.85rem 0 0;color:var(--studio-muted);">{{ quiz.description }}</p>
+  {% endif %}
+  <div class="qz-detail-kpis">
+    <div class="qz-detail-kpi"><span>Questions</span><strong>{{ quiz.q_count }}</strong></div>
+    <div class="qz-detail-kpi"><span>Attempts</span><strong>{{ quiz.attempt_count }}</strong></div>
+    <div class="qz-detail-kpi">
+      <span>Average score</span>
+      <strong>
+        {% if avg_score %}
+          {% if total_points and avg_points != None %}
+            {{ avg_points }} / {{ total_points }}
+            <small style="display:block;font-size:0.75rem;color:var(--studio-muted);font-weight:600;">{{ avg_score }}%</small>
+          {% else %}
+            {{ avg_score }}%
+          {% endif %}
+        {% else %}—{% endif %}
+      </strong>
+    </div>
+    <div class="qz-detail-kpi"><span>Pass rate</span><strong>{% if pass_rate != None %}{{ pass_rate }}%{% else %}—{% endif %}</strong></div>
+  </div>
+</header>
+
+<nav class="qz-tabs" aria-label="Quiz sections">
+  <a class="qz-tab is-on" href="#questions" data-qz-tab="questions">Questions</a>
+  <a class="qz-tab" href="#results" data-qz-tab="results">Results</a>
+  <a class="qz-tab" href="{% url 'courses:back_quiz_preview' quiz.pk %}">Preview</a>
+</nav>
+
+<section class="qz-panel reveal qz-section" id="questions">
+  <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+    <h3>Questions</h3>
+    <a href="{% url 'courses:back_question_create' quiz.pk %}" class="btn btn-sm btn-primary">+ Add question</a>
+  </div>
+  {% for q in quiz.questions.all %}
+  <article class="qz-question-card">
+    <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;">
+      <h4>Q{{ forloop.counter }}. {{ q.text }} <span style="color:var(--studio-muted);font-weight:500;font-size:0.85rem;">({{ q.points }} pt{{ q.points|pluralize }})</span></h4>
+      <form method="post" action="{% url 'courses:back_question_delete' q.pk %}" data-confirm="Delete this question?">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </div>
+    <ul class="qz-choices">
+      {% for c in q.choices.all %}
+      <li class="{% if c.is_correct %}is-correct{% endif %}">
+        {{ c.text }}{% if c.is_correct %} ✓{% endif %}
+      </li>
+      {% empty %}
+      <li style="color:var(--studio-muted);">No choices</li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% empty %}
+  <div class="empty-state" style="padding:1.5rem 0;">
+    <div class="icon">❓</div>
+    <p><strong>No questions yet.</strong></p>
+    <p>Add multiple-choice questions before publishing this quiz.</p>
+    <a href="{% url 'courses:back_question_create' quiz.pk %}" class="btn btn-primary" style="margin-top:0.75rem;">+ Add question</a>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="qz-panel reveal qz-section" id="results" hidden>
+  <h3>Results · student attempts</h3>
+  {% if attempts %}
+  <div class="table-wrap" style="box-shadow:none;border:0;padding:0;">
+    <table class="studio-table">
+      <thead>
+        <tr><th>Student</th><th>Score</th><th>Result</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for a in attempts %}
+        <tr>
+          <td>{{ a.student.get_full_name|default:a.student.username }}</td>
+          <td>{{ a.score }}%</td>
+          <td>
+            {% if a.passed %}
+            <span class="studio-state" data-state="published">Passed</span>
+            {% else %}
+            <span class="studio-state" data-state="archived">Failed</span>
+            {% endif %}
+          </td>
+          <td>{{ a.completed_at|date:"d/m/Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="studio-empty-inline">No attempts yet. Publish the quiz so students can take it.</p>
+  {% endif %}
+</section>
+
+<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+  <a href="{% url 'courses:back_course_detail' course.pk %}" class="btn btn-ghost btn-sm">← Course</a>
+  <a href="{% url 'courses:back_quiz_preview' quiz.pk %}" class="btn btn-secondary btn-sm">Preview as student</a>
+  <form method="post" action="{% url 'courses:back_quiz_delete' quiz.pk %}" data-confirm="Delete this quiz and all its questions?">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="list">
+    <button type="submit" class="btn btn-danger btn-sm">Delete quiz</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block teacher_js %}
+<script>
+(function () {
+  const tabs = document.querySelectorAll("[data-qz-tab]");
+  const sections = {
+    questions: document.getElementById("questions"),
+    results: document.getElementById("results"),
+  };
+  function show(name) {
+    Object.entries(sections).forEach(([key, el]) => {
+      if (!el) return;
+      el.hidden = key !== name;
+    });
+    tabs.forEach((t) => t.classList.toggle("is-on", t.dataset.qzTab === name));
+  }
+  tabs.forEach((t) => t.addEventListener("click", (e) => {
+    e.preventDefault();
+    show(t.dataset.qzTab);
+    history.replaceState(null, "", "#" + t.dataset.qzTab);
+  }));
+  const hash = (location.hash || "#questions").slice(1);
+  show(hash === "results" ? "results" : "questions");
+
+  document.querySelectorAll("[data-toggle-publish]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const url = btn.getAttribute("data-toggle-publish");
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": (document.querySelector("[name=csrfmiddlewaretoken]") || {}).value || "",
+            Accept: "application/json",
+          },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.message || "Update failed");
+        btn.textContent = data.is_published ? "Unpublish" : "Publish";
+        const state = document.getElementById("quiz-pub-state");
+        if (state) {
+          state.dataset.state = data.is_published ? "published" : "draft";
+          state.textContent = data.label;
+        }
+        if (window.TeacherToast) TeacherToast(data.message, "ok");
+      } catch (e) {
+        if (window.TeacherToast) TeacherToast(e.message || "Update failed", "err");
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

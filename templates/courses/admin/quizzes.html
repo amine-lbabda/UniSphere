@@ -1,0 +1,81 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Quizzes — Control Center{% endblock %}
+{% block page_title %}Quizzes{% endblock %}
+{% block page_sub %}All quizzes across every course{% endblock %}
+{% block admin_actions %}
+<a href="{% url 'courses:admin_quiz_create' %}" class="btn btn-primary btn-sm btn-glow">+ New quiz</a>
+{% endblock %}
+
+{% block content %}
+{% if quizzes %}
+<section class="qz-stats" aria-label="Quiz counts">
+  <div class="qz-stat"><span>Total</span><strong data-count="{{ quizzes|length }}">0</strong></div>
+</section>
+
+<form class="qz-toolbar" onsubmit="return false;">
+  <input type="search" id="qz-live-q" class="form-control" placeholder="Search quizzes…" aria-label="Search quizzes">
+</form>
+
+<div class="qz-grid" id="qz-grid">
+  {% for q in quizzes %}
+  <article class="qz-card reveal" data-search="{{ q.title }} {{ q.course.code }} {{ q.course.instructor.get_full_name|default:q.course.instructor.username }}">
+    <div class="qz-card-top">
+      <div>
+        <h3><a href="{% url 'courses:admin_quiz_detail' q.pk %}">🧠 {{ q.title }}</a></h3>
+        <p class="qz-card-meta">
+          {{ q.course.code }} · {{ q.course.title }}
+          <br>Teacher: {{ q.course.instructor.get_full_name|default:q.course.instructor.username }}
+        </p>
+      </div>
+      <span class="studio-state" data-state="{% if q.is_published %}published{% else %}draft{% endif %}">
+        {% if q.is_published %}Published{% else %}Draft{% endif %}
+      </span>
+    </div>
+    <div class="qz-metrics">
+      <div class="qz-metric"><span>Questions</span><strong>{{ q.question_n }}</strong></div>
+      <div class="qz-metric"><span>Attempts</span><strong>{{ q.attempt_count }}</strong></div>
+      <div class="qz-metric"><span>Pass mark</span><strong>{{ q.passing_score }}%</strong></div>
+    </div>
+    <div class="qz-card-actions">
+      <a href="{% url 'courses:admin_quiz_detail' q.pk %}" class="btn btn-sm btn-primary">Detail</a>
+      <a href="{% url 'courses:admin_quiz_edit' q.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+      <form method="post" action="{% url 'courses:admin_quiz_delete' q.pk %}" data-confirm="Delete « {{ q.title }} » and its questions?">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+<p id="qz-empty-filter" hidden class="studio-empty-inline" style="text-align:center;padding:1.5rem;">No quizzes match your search.</p>
+{% else %}
+<div class="empty-state reveal">
+  <div class="icon">📝</div>
+  <p><strong>No quizzes yet.</strong></p>
+  <p>Create a quiz for any course on the platform.</p>
+  <a href="{% url 'courses:admin_quiz_create' %}" class="btn btn-primary" style="margin-top:1rem;">+ New quiz</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cards = [...document.querySelectorAll("#qz-grid .qz-card")];
+  const qInput = document.getElementById("qz-live-q");
+  const empty = document.getElementById("qz-empty-filter");
+  if (!qInput) return;
+  qInput.addEventListener("input", () => {
+    const q = (qInput.value || "").toLowerCase().trim();
+    let shown = 0;
+    cards.forEach((card) => {
+      const hay = (card.getAttribute("data-search") || "").toLowerCase();
+      const ok = !q || hay.includes(q);
+      card.hidden = !ok;
+      if (ok) shown += 1;
+    });
+    if (empty) empty.hidden = shown > 0 || !cards.length;
+  });
+});
+</script>
+{% endblock %}

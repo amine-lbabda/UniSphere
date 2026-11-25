@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block body_class %}back-office{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="back-shell">
+  <aside class="back-sidebar">
+    <h2>Espace enseignant</h2>
+    <ul class="back-nav">
+      <li>
+        <a href="{% url 'courses:back_dashboard' %}" class="{% if request.resolver_match.url_name == 'back_dashboard' %}active{% endif %}">
+          <span>📊</span> Tableau de bord
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'courses:back_course_list' %}" class="{% if 'course' in request.resolver_match.url_name or 'resource' in request.resolver_match.url_name or 'quiz' in request.resolver_match.url_name or 'question' in request.resolver_match.url_name %}active{% endif %}">
+          <span>📚</span> Mes modules
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'courses:back_course_create' %}" class="{% if request.resolver_match.url_name == 'back_course_create' %}active{% endif %}">
+          <span>✨</span> Nouveau module
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'courses:front_notifications' %}">
+          <span>🔔</span> Notifications{% if unread_notifications %} ({{ unread_notifications }}){% endif %}
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'courses:front_home' %}">
+          <span>🏠</span> Accueil public
+        </a>
+      </li>
+    </ul>
+  </aside>
+  <div class="back-content">
+    {% block back_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

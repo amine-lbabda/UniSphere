@@ -1,0 +1,57 @@
+﻿{% extends "layouts/teacher.html" %}
+{% block title %}{{ title }} — Quiz Center{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if course %}{{ course.code }} — {{ course.title }}{% else %}Choose a course, then configure the quiz{% endif %}{% endblock %}
+{% block studio_actions %}
+<a href="{% if quiz %}{% url 'courses:back_quiz_detail' quiz.pk %}{% elif course %}{% url 'courses:back_course_detail' course.pk %}{% else %}{% url 'courses:back_quizzes' %}{% endif %}" class="btn btn-secondary btn-sm">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="studio-form-shell reveal">
+  {% csrf_token %}
+  <section class="studio-form-section">
+    <h2>Quiz identity</h2>
+    {% if select_course and form.course %}
+    <div class="form-group">
+      <label for="{{ form.course.id_for_label }}">Course</label>
+      {{ form.course }}
+      {{ form.course.errors }}
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label for="{{ form.title.id_for_label }}">Title</label>
+      {{ form.title }}
+      {{ form.title.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+    </div>
+  </section>
+  <section class="studio-form-section">
+    <h2>Rules &amp; publication</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="{{ form.duration_minutes.id_for_label }}">Duration (minutes)</label>
+        {{ form.duration_minutes }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.passing_score.id_for_label }}">Pass mark (%)</label>
+        {{ form.passing_score }}
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="{{ form.due_date.id_for_label }}">Due date</label>
+      {{ form.due_date }}
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+      {{ form.is_published }}
+      <label for="{{ form.is_published.id_for_label }}" style="margin:0;">Publish quiz (notifies enrolled students)</label>
+    </div>
+  </section>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-glow">Save quiz</button>
+  </div>
+</form>
+{% endblock %}
+

@@ -1,0 +1,36 @@
+{% extends layout|default:"layouts/student.html" %}
+{% block title %}Résultat — {{ quiz.title }}{% endblock %}
+{% block page_title %}Résultat{% endblock %}
+{% block page_sub %}{{ quiz.title }}{% endblock %}
+
+{% block content %}
+<section>
+  <div style="max-width:560px;margin:0 auto;text-align:center;">
+    <div class="form-card reveal result-wow" style="max-width:none;">
+      <p class="hero-kicker" style="justify-content:center;">{% if attempt.passed %}Bravo{% else %}Continue{% endif %}</p>
+      <h1 style="font-family:var(--font-display);margin:0 0 0.5rem;">Résultat du quiz</h1>
+      <p style="color:var(--slate);margin:0 0 1.5rem;">{{ quiz.title }} · {{ quiz.course.code }}</p>
+
+      <div class="score-ring {% if attempt.passed %}score-ring-success{% else %}score-ring-warn{% endif %}" style="--score: {{ attempt.score }}%;">
+        <strong data-count="{{ attempt.score|floatformat:0 }}">0</strong><span style="position:relative;z-index:1;">%</span>
+      </div>
+
+      {% if attempt.passed %}
+      <p class="result-banner success">✓ Quiz réussi — seuil {{ quiz.passing_score }}% atteint</p>
+      {% else %}
+      <p class="result-banner fail">Seuil {{ quiz.passing_score }}% non atteint — vous pouvez réessayer</p>
+      {% endif %}
+
+      <p style="color:var(--slate);font-size:0.9rem;">Terminé le {{ attempt.completed_at|date:"d/m/Y H:i" }}</p>
+
+      <div class="form-actions" style="justify-content:center;">
+        <a href="{{ quiz.course.get_absolute_url }}" class="btn btn-secondary">Retour au module</a>
+        <a href="{% url 'courses:student_dashboard' %}" class="btn btn-ghost">Mon espace</a>
+        {% if not attempt.passed %}
+        <a href="{% url 'courses:front_quiz_take' quiz.pk %}" class="btn btn-primary btn-glow">Repasser</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

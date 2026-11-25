@@ -1,0 +1,167 @@
+{% extends "layouts/teacher.html" %}
+{% load static %}
+{% block title %}Academic Studio — UniSphere{% endblock %}
+{% block page_title %}Academic Studio{% endblock %}
+{% block page_sub %}Build, organize and publish your academic content{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_course_create' %}" class="btn btn-primary btn-sm btn-glow">+ Create course</a>
+{% endblock %}
+
+{% block content %}
+<header class="studio-hero reveal">
+  <p class="studio-eyebrow">UniSphere · Academic Studio</p>
+  <h2 class="studio-greeting">{{ greeting }}, {{ professor_name }} 👋</h2>
+  <p class="studio-lead">Create → Organize → Preview → Schedule → Publish → Monitor</p>
+</header>
+
+<section class="studio-kpi-row" aria-label="Key metrics">
+  <article class="studio-kpi reveal" data-accent="courses" data-tilt>
+    <span class="studio-kpi-label">Courses</span>
+    <span class="studio-kpi-value" data-count="{{ total_courses }}">0</span>
+    <span class="studio-kpi-hint">{{ visible_courses }} visible · {{ drafts }} draft</span>
+  </article>
+  <article class="studio-kpi reveal" data-accent="students" data-tilt>
+    <span class="studio-kpi-label">Students</span>
+    <span class="studio-kpi-value" data-count="{{ students_count }}">0</span>
+    <span class="studio-kpi-hint">Across your courses</span>
+  </article>
+  <article class="studio-kpi reveal" data-accent="resources" data-tilt>
+    <span class="studio-kpi-label">Resources</span>
+    <span class="studio-kpi-value" data-count="{{ resources_count }}">0</span>
+    <span class="studio-kpi-hint">{{ resources_visible }} visible · {{ resources_hidden }} hidden</span>
+  </article>
+  <article class="studio-kpi reveal" data-accent="quizzes" data-tilt>
+    <span class="studio-kpi-label">Quizzes</span>
+    <span class="studio-kpi-value" data-count="{{ quizzes_count }}">0</span>
+    <span class="studio-kpi-hint">{{ attempts_count }} attempts · avg {{ avg_score }}%</span>
+  </article>
+</section>
+
+<div class="studio-dash">
+  <section class="studio-panel studio-attention studio-span-12 reveal" aria-labelledby="attention-title">
+    <div class="studio-attention-head">
+      <h3 id="attention-title"><span aria-hidden="true">⚠️</span> Needs your attention</h3>
+      {% if attention_items %}
+      <span class="studio-attention-count">{{ attention_items|length }} item{{ attention_items|length|pluralize }}</span>
+      {% endif %}
+    </div>
+    {% if attention_items %}
+    <ul class="studio-attention-list">
+      {% for item in attention_items %}
+      <li>
+        <a href="{{ item.url }}" data-tone="{{ item.tone }}">
+          <span class="studio-attention-ico" aria-hidden="true">{{ item.icon }}</span>
+          <span class="studio-attention-text">
+            <strong>{{ item.title }}</strong>
+            {% if item.detail %}<span>{{ item.detail }}</span>{% endif %}
+          </span>
+          <span class="studio-attention-arrow" aria-hidden="true">→</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="studio-attention-empty">✓ Everything looks good — no urgent actions right now.</p>
+    {% endif %}
+  </section>
+
+  <section class="studio-panel studio-span-8 reveal">
+    <h3>Students per course</h3>
+    <div class="chart-wrap"><canvas id="chartModules" aria-label="Bar chart of students per course"></canvas></div>
+  </section>
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Course status</h3>
+    <div class="chart-wrap"><canvas id="chartStatus" aria-label="Doughnut chart of course statuses"></canvas></div>
+  </section>
+
+  <section class="studio-panel studio-span-8 reveal">
+    <h3>Quiz activity (14 days)</h3>
+    <div class="chart-wrap"><canvas id="chartActivity" aria-label="Line chart of quiz attempts over 14 days"></canvas></div>
+  </section>
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Pass / fail</h3>
+    <div class="chart-wrap"><canvas id="chartPass" aria-label="Doughnut chart of quiz pass and fail"></canvas></div>
+  </section>
+
+  <section class="studio-panel studio-span-4 reveal">
+    <h3>Visibility</h3>
+    <div class="chart-wrap"><canvas id="chartVisibility" aria-label="Doughnut chart of course visibility"></canvas></div>
+  </section>
+
+  <section class="studio-panel studio-span-8 reveal">
+    <h3>Recent activity</h3>
+    <ul class="studio-activity">
+      {% for item in recent_activity %}
+      <li>
+        <a href="{{ item.url }}">
+          <span class="studio-activity-dot {{ item.kind }}" aria-hidden="true"></span>
+          <span>
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.detail }} · {{ item.when|date:"d/m/Y H:i" }}</small>
+          </span>
+        </a>
+      </li>
+      {% empty %}
+      <li><p class="studio-empty-inline">No activity yet. Create your first course to get started.</p></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="studio-panel studio-span-6 reveal">
+    <h3>Recent courses</h3>
+    <div class="table-wrap" style="box-shadow:none;border:0;padding:0;">
+      <table class="studio-table">
+        <thead>
+          <tr><th>Code</th><th>Title</th><th>Status</th><th>Students</th></tr>
+        </thead>
+        <tbody>
+          {% for c in recent_courses %}
+          <tr>
+            <td>{{ c.code }}</td>
+            <td><a href="{% url 'courses:back_course_detail' c.pk %}">{{ c.title }}</a></td>
+            <td><span class="badge {{ c.status_badge_class }}">{{ c.get_status_display }}</span></td>
+            <td>{{ c.student_count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="studio-empty-inline">No courses yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="studio-panel studio-span-6 reveal">
+    <h3>Latest quiz attempts</h3>
+    {% for a in recent_attempts %}
+    <div class="activity-item" style="margin-bottom:0.55rem;">
+      <div class="activity-icon" aria-hidden="true">{% if a.passed %}✓{% else %}!{% endif %}</div>
+      <div>
+        <strong>{{ a.student.get_full_name|default:a.student.username }}</strong>
+        <p style="margin:0;color:var(--studio-muted);font-size:0.82rem;">{{ a.quiz.course.code }} · {{ a.score }}%</p>
+      </div>
+    </div>
+    {% empty %}
+    <p class="studio-empty-inline">No attempts yet.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<script id="raw-modules" type="application/json">{{ chart_modules|safe }}</script>
+<script id="raw-activity" type="application/json">{{ chart_activity|safe }}</script>
+<script id="raw-pass" type="application/json">{{ chart_pass|safe }}</script>
+<script id="raw-status" type="application/json">{{ chart_status|safe }}</script>
+<script id="raw-visibility" type="application/json">{{ chart_visibility|safe }}</script>
+{% endblock %}
+
+{% block teacher_js %}
+<script src="{% static 'js/charts.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  UniCharts.bar("chartModules", "raw-modules", { label: "Students", color: "rgba(91,92,226,0.85)" });
+  UniCharts.line("chartActivity", "raw-activity", { label: "Attempts", color: "#06b6d4", fill: "rgba(6,182,212,0.12)" });
+  UniCharts.doughnut("chartPass", "raw-pass");
+  UniCharts.doughnut("chartStatus", "raw-status");
+  UniCharts.doughnut("chartVisibility", "raw-visibility");
+});
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "layouts/admin.html" %}
+{% block title %}Broadcast — Control Center{% endblock %}
+{% block page_title %}Broadcast{% endblock %}
+{% block page_sub %}Send a mass notification to students, teachers, or everyone{% endblock %}
+
+{% block content %}
+<form method="post" class="form-card reveal">
+  {% csrf_token %}
+  <div class="form-group">
+    <label>Titre</label>
+    <input name="title" class="form-control" required placeholder="Ex. Maintenance planifiée">
+  </div>
+  <div class="form-group">
+    <label>Message</label>
+    <textarea name="message" class="form-control" rows="4" required></textarea>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Audience</label>
+      <select name="audience" class="form-control">
+        <option value="all">Tous les utilisateurs</option>
+        <option value="students">Étudiants uniquement</option>
+        <option value="teachers">Enseignants uniquement</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Niveau</label>
+      <select name="level" class="form-control">
+        {% for val, label in levels %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-glow" type="submit">Envoyer</button>
+</form>
+{% endblock %}

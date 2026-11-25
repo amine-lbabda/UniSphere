@@ -1,0 +1,73 @@
+{% extends layout|default:"layouts/student.html" %}
+{% block title %}{{ quiz.title }} — UniSphere{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_sub %}{{ quiz.course.code }} · {{ questions|length }} question{{ questions|length|pluralize }} · seuil {{ quiz.passing_score }}%{% endblock %}
+
+{% block content %}
+<section>
+  <div style="max-width:760px;">
+    {% if is_preview and not student_sees %}
+    <div class="preview-unavailable reveal" style="margin-bottom:1.25rem;">
+      <div class="icon" aria-hidden="true">🔒</div>
+      <h2>Students cannot take this quiz yet</h2>
+      <p>
+        {% if not quiz.is_published %}Quiz is unpublished.{% endif %}
+        {% if not quiz.course.is_student_accessible %} Course is hidden from students.{% endif %}
+        Below is the question layout for authoring review.
+      </p>
+    </div>
+    {% elif is_preview %}
+    <p class="reveal" style="color:var(--desk-muted);margin-bottom:1rem;">
+      Read-only student preview — answers are not submitted.
+    </p>
+    {% endif %}
+
+    <div class="quiz-topbar glass-panel reveal">
+      <div>
+        <h2 style="margin:0;font-size:1.1rem;">{% if is_preview %}Preview timer{% else %}Minuteur{% endif %}</h2>
+        <p style="margin:0.35rem 0 0;color:var(--slate);font-size:0.85rem;">
+          {% if is_preview %}Shown to students during the attempt{% else %}Soumission auto à 0:00{% endif %}
+        </p>
+      </div>
+      <div class="quiz-timer" id="quiz-timer" data-minutes="{{ quiz.duration_minutes }}" {% if is_preview %}data-preview="1"{% endif %}>
+        <span class="timer-label">Temps</span>
+        <strong id="timer-display">{{ quiz.duration_minutes }}:00</strong>
+      </div>
+    </div>
+
+    {% if quiz.description %}
+    <p class="reveal" style="color:var(--slate);margin:1.25rem 0;">{{ quiz.description }}</p>
+    {% endif %}
+
+    <div class="quiz-progress-bar reveal"><div id="quiz-answered-bar"></div></div>
+    <p class="quiz-progress-label reveal"><span id="answered-count">0</span> / {{ questions|length }} répondues</p>
+
+    <form method="{% if is_preview %}get{% else %}post{% endif %}" class="reveal" id="quiz-form" {% if is_preview %}onsubmit="return false;"{% endif %}>
+      {% if not is_preview %}{% csrf_token %}{% endif %}
+      {% for q in questions %}
+      <div class="quiz-question" data-question>
+        <h3>Q{{ forloop.counter }}. {{ q.text }} <span style="color:var(--slate);font-weight:500;font-size:0.85rem;">({{ q.points }} pt{{ q.points|pluralize }})</span></h3>
+        <ul class="choice-list">
+          {% for c in q.choices.all %}
+          <li>
+            <label>
+              <input type="radio" name="q_{{ q.pk }}" value="{{ c.pk }}" {% if not is_preview %}required{% endif %} {% if is_preview %}disabled{% endif %}>
+              <span>{{ c.text }}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% empty %}
+      <div class="empty-state"><p>Ce quiz n’a pas encore de questions.</p></div>
+      {% endfor %}
+
+      {% if questions and not is_preview %}
+      <button type="submit" class="btn btn-primary btn-glow">Soumettre mes réponses</button>
+      {% elif is_preview %}
+      <a href="{{ preview_back_url }}" class="btn btn-primary">← Back to Academic Studio</a>
+      {% endif %}
+    </form>
+  </div>
+</section>
+{% endblock %}

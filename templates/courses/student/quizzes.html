@@ -1,0 +1,36 @@
+{% extends "layouts/student.html" %}
+{% block title %}Mes quiz — UniSphere{% endblock %}
+{% block page_title %}Quizzes{% endblock %}
+{% block page_sub %}Évaluations de vos modules{% endblock %}
+
+{% block content %}
+<div class="academic-page">
+  <div class="academic-page-head reveal-up">
+    <div>
+      <h2>Mes évaluations</h2>
+      <p>Quiz publiés sur vos modules affectés.</p>
+    </div>
+    <a href="{% url 'courses:student_dashboard' %}" class="desk-btn desk-btn-ghost">← Mon bureau</a>
+  </div>
+
+  <div class="desk-quiz-list">
+    {% for item in cards %}
+    <div class="desk-quiz-card reveal-up">
+      <div>
+        <strong>{{ item.quiz.title }}</strong>
+        <p>
+          {{ item.quiz.course.code }} · {{ item.quiz.duration_minutes }} min · seuil {{ item.quiz.passing_score }}%
+          {% if item.attempt %} · dernier score <strong>{{ item.attempt.score }}%</strong>{% endif %}
+          {% if item.quiz.due_date %} · échéance {{ item.quiz.due_date|date:"d/m H:i" }}{% endif %}
+        </p>
+      </div>
+      <a href="{% url 'courses:front_quiz_take' item.quiz.pk %}" class="desk-btn desk-btn-primary">
+        {% if item.attempt %}Repasser{% else %}Lancer{% endif %}
+      </a>
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>Aucun quiz disponible.</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

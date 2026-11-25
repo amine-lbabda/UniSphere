@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}UniSphere{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{% static 'img/logo-unisphere.png' %}">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a href="{% url 'courses:front_home' %}" class="brand">
+        <img src="{% static 'img/logo-unisphere.png' %}" alt="UniSphere" class="brand-logo">
+        <span>UniSphere</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="{% url 'courses:front_home' %}" class="{% if request.resolver_match.url_name == 'front_home' %}active{% endif %}">Accueil</a></li>
+        {% if is_student %}
+        <li><a href="{% url 'courses:student_dashboard' %}" class="{% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">Mon espace</a></li>
+        <li><a href="{% url 'courses:front_catalog' %}" class="{% if request.resolver_match.url_name == 'front_catalog' %}active{% endif %}">Mes modules</a></li>
+        {% elif is_teacher %}
+        <li><a href="{% url 'courses:back_dashboard' %}" class="{% if 'back_' in request.resolver_match.url_name %}active{% endif %}">Espace enseignant</a></li>
+        <li><a href="{% url 'courses:back_course_list' %}">Mes modules</a></li>
+        {% else %}
+        <li><a href="{% url 'courses:front_catalog' %}" class="{% if request.resolver_match.url_name == 'front_catalog' %}active{% endif %}">Catalogue</a></li>
+        {% endif %}
+        {% if user.is_authenticated %}
+        <li><a href="{% url 'courses:front_notifications' %}" class="{% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+          Notifications{% if unread_notifications %}<span class="nav-badge">{{ unread_notifications }}</span>{% endif %}
+        </a></li>
+        {% endif %}
+      </ul>
+      <div class="nav-actions">
+        {% if user.is_authenticated %}
+          <span style="font-size:0.85rem;color:var(--slate);">
+            {{ user.get_full_name|default:user.username }}
+            {% if user_profile %}
+            <span class="chip" style="margin-left:0.35rem;">{{ user_profile.get_role_display }}</span>
+            {% endif %}
+          </span>
+          <form action="{% url 'logout' %}" method="post">{% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-sm">Déconnexion</button>
+          </form>
+        {% else %}
+          <a href="{% url 'courses:signup' %}" class="btn btn-secondary btn-sm">Inscription</a>
+          <a href="{% url 'login' %}" class="btn btn-primary btn-sm">Connexion</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  {% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block footer %}
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="brand">
+        <img src="{% static 'img/logo-unisphere.png' %}" alt="" class="brand-logo brand-logo-sm">
+        UniSphere
+      </div>
+      <span>Espaces séparés : étudiants · enseignants · administration</span>
+    </div>
+  </footer>
+  {% endblock %}
+
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

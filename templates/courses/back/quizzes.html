@@ -1,0 +1,133 @@
+{% extends "layouts/teacher.html" %}
+{% load static %}
+{% block title %}Quiz Center — Academic Studio{% endblock %}
+{% block page_title %}Quiz Center{% endblock %}
+{% block page_sub %}Manage questions, results and student attempts{% endblock %}
+{% block studio_actions %}
+<a href="{% url 'courses:back_quiz_create_standalone' %}" class="btn btn-primary btn-sm btn-glow">+ New quiz</a>
+{% endblock %}
+
+{% block teacher_css %}
+<link rel="stylesheet" href="{% static 'css/studio-quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<section class="qz-stats" aria-label="Quiz statistics">
+  <div class="qz-stat"><span>Total</span><strong data-count="{{ stats.total }}">0</strong></div>
+  <div class="qz-stat"><span>Published</span><strong data-count="{{ stats.published }}">0</strong></div>
+  <div class="qz-stat"><span>Draft</span><strong data-count="{{ stats.draft }}">0</strong></div>
+  <div class="qz-stat"><span>No questions</span><strong data-count="{{ stats.empty }}">0</strong></div>
+  <div class="qz-stat"><span>Attempts</span><strong data-count="{{ stats.attempts }}">0</strong></div>
+</section>
+
+<form method="get" class="qz-toolbar">
+  <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search quizzes…" aria-label="Search quizzes">
+  <div class="qz-chips" role="group" aria-label="Status filters">
+    <a class="qz-chip {% if not status %}is-on{% endif %}" href="?q={{ q }}&course={{ course_id }}">All</a>
+    <a class="qz-chip {% if status == 'published' %}is-on{% endif %}" href="?q={{ q }}&status=published&course={{ course_id }}">Published</a>
+    <a class="qz-chip {% if status == 'draft' %}is-on{% endif %}" href="?q={{ q }}&status=draft&course={{ course_id }}">Draft</a>
+    <a class="qz-chip {% if status == 'empty' %}is-on{% endif %}" href="?q={{ q }}&status=empty&course={{ course_id }}">No questions</a>
+  </div>
+  <select name="course" class="form-control" onchange="this.form.submit()" aria-label="Filter by course">
+    <option value="">All courses</option>
+    {% for c in courses %}
+    <option value="{{ c.pk }}" {% if course_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.code }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+{% if quizzes %}
+<div class="qz-grid">
+  {% for q in quizzes %}
+  <article class="qz-card reveal">
+    <div class="qz-card-top">
+      <div>
+        <h3><a href="{% url 'courses:back_quiz_detail' q.pk %}">🧠 {{ q.title }}</a></h3>
+        <p class="qz-card-meta">{{ q.course.code }} · {{ q.course.title }}</p>
+      </div>
+      <span class="studio-state" data-state="{% if q.is_published %}published{% else %}draft{% endif %}">
+        {% if q.is_published %}Published{% else %}Draft{% endif %}
+      </span>
+    </div>
+    <div class="qz-metrics">
+      <div class="qz-metric"><span>Questions</span><strong>{{ q.q_count }}</strong></div>
+      <div class="qz-metric"><span>Attempts</span><strong>{{ q.attempt_count }}</strong></div>
+      <div class="qz-metric">
+        <span>Avg score</span>
+        <strong>
+          {% if q.avg_score != None %}
+            {{ q.avg_score|floatformat:1 }}%
+            {% if q.total_points %}
+            <small style="display:block;font-size:0.68rem;color:var(--studio-muted);font-weight:600;">
+              {{ q.avg_score|floatformat:0 }}% of {{ q.total_points }} pts
+            </small>
+            {% endif %}
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+      </div>
+    </div>
+    {% if q.total_points %}
+    <p class="qz-card-meta">Pass mark {{ q.passing_score }}% · {{ q.total_points }} pts total · {{ q.duration_minutes }} min</p>
+    {% else %}
+    <p class="qz-card-meta">Pass mark {{ q.passing_score }}% · {{ q.duration_minutes }} min{% if q.q_count == 0 %} · needs questions{% endif %}</p>
+    {% endif %}
+    <div class="qz-card-actions">
+      <a href="{% url 'courses:back_quiz_detail' q.pk %}#questions" class="btn btn-sm btn-primary">Questions</a>
+      <a href="{% url 'courses:back_quiz_detail' q.pk %}#results" class="btn btn-sm btn-secondary">Results</a>
+      <a href="{% url 'courses:back_quiz_preview' q.pk %}" class="btn btn-sm btn-ghost">Preview</a>
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost pub-toggle"
+        data-toggle-publish="{% url 'courses:back_quiz_toggle_publish' q.pk %}"
+        aria-label="Toggle publish"
+      >
+        {% if q.is_published %}Unpublish{% else %}Publish{% endif %}
+      </button>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="icon">📝</div>
+  <p><strong>No quizzes yet.</strong></p>
+  <p>Create your first quiz to assess students.</p>
+  <a href="{% url 'courses:back_quiz_create_standalone' %}" class="btn btn-primary" style="margin-top:1rem;">+ New quiz</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block teacher_js %}
+<script>
+document.querySelectorAll("[data-toggle-publish]").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const url = btn.getAttribute("data-toggle-publish");
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": (document.querySelector("[name=csrfmiddlewaretoken]") || {}).value || "",
+          Accept: "application/json",
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.message || "Update failed");
+      btn.textContent = data.is_published ? "Unpublish" : "Publish";
+      const card = btn.closest(".qz-card");
+      const state = card?.querySelector(".studio-state");
+      if (state) {
+        state.dataset.state = data.is_published ? "published" : "draft";
+        state.textContent = data.label;
+      }
+      if (window.TeacherToast) TeacherToast(data.message, "ok");
+    } catch (e) {
+      if (window.TeacherToast) TeacherToast(e.message || "Update failed", "err");
+    }
+  });
+});
+</script>
+{% endblock %}

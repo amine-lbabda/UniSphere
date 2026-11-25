@@ -1,0 +1,38 @@
+{% extends "layouts/teacher.html" %}
+{% block title %}Students — Academic Studio{% endblock %}
+{% block page_title %}Students{% endblock %}
+{% block page_sub %}Learners enrolled in your courses{% endblock %}
+
+{% block content %}
+{% if enrollments %}
+<div class="table-wrap reveal studio-students-table">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Student</th>
+        <th>Level</th>
+        <th>Course</th>
+        <th>Enrolled</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in enrollments %}
+      <tr>
+        <td>{{ e.student.get_full_name|default:e.student.username }}</td>
+        <td>{% if e.student.profile %}{{ e.student.profile.get_academic_level_display }}{% else %}—{% endif %}</td>
+        <td><span class="chip">{{ e.course.code }}</span> {{ e.course.title }}</td>
+        <td>{{ e.enrolled_at|date:"d/m/Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state reveal">
+  <div class="icon">👨‍🎓</div>
+  <p><strong>No students enrolled yet.</strong></p>
+  <p>When learners join your published courses, they will appear here.</p>
+  <a href="{% url 'courses:back_course_list' %}" class="btn btn-secondary" style="margin-top:1rem;">View courses</a>
+</div>
+{% endif %}
+{% endblock %}

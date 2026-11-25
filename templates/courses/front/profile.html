@@ -1,0 +1,42 @@
+{% extends shell_layout %}
+{% block title %}Mon profil — UniSphere{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+{% block page_sub %}Consultation de vos informations personnelles{% endblock %}
+{% block top_actions %}
+<a href="{% url 'courses:profile_edit' %}" class="btn btn-primary btn-sm">Modifier mon profil</a>
+{% endblock %}
+
+{% block content %}
+<div class="profile-layout">
+  <aside class="profile-card">
+    <div class="profile-avatar-wrap">
+      {% if profile.photo %}
+      <img src="{{ profile.photo.url }}" alt="Photo de profil" class="profile-avatar-img">
+      {% else %}
+      <div class="profile-avatar-fallback">{{ user.first_name|default:user.username|slice:":1"|upper }}</div>
+      {% endif %}
+    </div>
+    <h2>{{ user.get_full_name|default:user.username }}</h2>
+    <p class="profile-role"><span class="chip">{{ profile.get_role_display }}</span></p>
+    <p class="profile-muted">@{{ user.username }}</p>
+  </aside>
+
+  <section class="profile-details form-card">
+    <h3 class="mod-section-title" style="margin-top:0;">Informations personnelles</h3>
+    <div class="info-row"><span>Prénom</span><strong>{{ user.first_name|default:"—" }}</strong></div>
+    <div class="info-row"><span>Nom</span><strong>{{ user.last_name|default:"—" }}</strong></div>
+    <div class="info-row"><span>Email</span><strong>{{ user.email|default:"—" }}</strong></div>
+    <div class="info-row"><span>Téléphone</span><strong>{{ profile.phone|default:"—" }}</strong></div>
+    <div class="info-row"><span>Type d’utilisateur</span><strong>{{ profile.get_role_display }}</strong></div>
+    {% if profile.is_student %}
+    <div class="info-row"><span>Matricule</span><strong>{{ profile.student_id|default:"—" }}</strong></div>
+    <div class="info-row"><span>Parcours</span><strong>{{ profile.get_academic_level_display }}</strong></div>
+    {% endif %}
+    <div class="info-row"><span>Membre depuis</span><strong>{{ user.date_joined|date:"d/m/Y" }}</strong></div>
+
+    <div class="form-actions" style="margin-top:1.25rem;">
+      <a href="{% url 'courses:profile_edit' %}" class="btn btn-primary">Modifier</a>
+    </div>
+  </section>
+</div>
+{% endblock %}
