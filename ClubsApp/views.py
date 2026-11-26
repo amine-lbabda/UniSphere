@@ -38,7 +38,7 @@ ClubBoardFormSet = inlineformset_factory(
     ClubsMembersBoard,
     form=BoardMemberForm,
     extra=1,
-    can_delete=False,
+    can_delete=True,
 )
 
 

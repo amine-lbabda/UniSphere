@@ -1,9 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}{% if event %}Modifier{% else %}Créer{% endif %} un événement{% endblock %}
+{% block title %}
+  {% if event %}
+    Modifier
+  {% else %}
+    Créer
+  {% endif %}un événement
+{% endblock %}
 {% block content %}
   <section class="section-card form-card">
     <div class="page-header">
-      <h1>{% if event %}Modifier l'événement{% else %}Nouvel événement{% endif %}</h1>
+      <h1>
+        {% if event %}
+          Modifier l'événement
+        {% else %}
+          Nouvel événement
+        {% endif %}
+      </h1>
     </div>
     <form method="post" novalidate>
       {% csrf_token %}
@@ -22,6 +34,10 @@
           {% endfor %}
         </div>
       {% endfor %}
+      {% for hidden in form.hidden_fields %}
+        {{ hidden }}
+      {% endfor %}
+      <div id="event-map"></div>
 
       <h2 class="h5 mt-4">Participants</h2>
       {{ participant_formset.management_form }}
@@ -30,34 +46,41 @@
       {% endfor %}
       <div id="event-participant-forms" data-prefix="{{ participant_formset.prefix }}">
         {% for participant_form in participant_formset %}
-          <div class="row g-3 mb-3">
+          <div class="row g-3 align-items-end mb-3 participant-row">
             <div class="col-md-6">
-              <label class="form-label" for="{{ participant_form.participant.id_for_label }}">
-                Participant
-              </label>
+              <label class="form-label" for="{{ participant_form.participant.id_for_label }}">Participant</label>
               {{ participant_form.participant }}
               {% for error in participant_form.participant.errors %}
                 <div class="text-danger small">{{ error }}</div>
               {% endfor %}
+            </div>
+            <div class="col-auto">
+              {{ participant_form.DELETE.as_hidden }}
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-danger participant-remove" type="button">Supprimer</button>
+                <button class="btn btn-primary participant-add" type="button">Ajouter un participant</button>
+              </div>
             </div>
           </div>
         {% endfor %}
       </div>
       <template id="empty-event-participant-form">
         {% with participant_form=participant_formset.empty_form %}
-          <div class="row g-3 mb-3">
+          <div class="row g-3 align-items-end mb-3 participant-row">
             <div class="col-md-6">
-              <label class="form-label" for="{{ participant_form.participant.id_for_label }}">
-                Participant
-              </label>
+              <label class="form-label" for="{{ participant_form.participant.id_for_label }}">Participant</label>
               {{ participant_form.participant }}
+            </div>
+            <div class="col-auto">
+              {{ participant_form.DELETE.as_hidden }}
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-danger participant-remove" type="button">Supprimer</button>
+                <button class="btn btn-primary participant-add" type="button">Ajouter un participant</button>
+              </div>
             </div>
           </div>
         {% endwith %}
       </template>
-      <button class="btn btn-outline-primary" type="button" id="add-event-participant">
-        Ajouter un participant
-      </button>
 
       <div class="d-flex gap-2 mt-4">
         <button class="btn btn-primary" type="submit">Enregistrer</button>
@@ -66,18 +89,31 @@
     </form>
   </section>
   <script>
-    document.getElementById("add-event-participant").addEventListener("click", function () {
-      const container = document.getElementById("event-participant-forms");
-      const totalForms = document.getElementById(
-        `id_${container.dataset.prefix}-TOTAL_FORMS`
-      );
-      const newIndex = Number(totalForms.value);
-      const newForm = document
-        .getElementById("empty-event-participant-form")
-        .innerHTML.replace(/__prefix__/g, newIndex);
+    const participantContainer = document.getElementById('event-participant-forms')
 
-      container.insertAdjacentHTML("beforeend", newForm);
-      totalForms.value = newIndex + 1;
-    });
+    function addParticipantRow() {
+      const totalForms = document.getElementById(`id_${participantContainer.dataset.prefix}-TOTAL_FORMS`)
+      const newIndex = Number(totalForms.value)
+      const newForm = document.getElementById('empty-event-participant-form').innerHTML.replace(/__prefix__/g, newIndex)
+
+      participantContainer.insertAdjacentHTML('beforeend', newForm)
+      totalForms.value = newIndex + 1
+    }
+
+    participantContainer.addEventListener('click', function (event) {
+      const addButton = event.target.closest('.participant-add')
+      if (addButton) {
+        addParticipantRow()
+        return
+      }
+
+      const removeButton = event.target.closest('.participant-remove')
+      if (!removeButton) return
+
+      const row = removeButton.closest('.participant-row')
+      const deleteField = row.querySelector('input[name$="-DELETE"]')
+      deleteField.value = 'on'
+      row.classList.add('d-none')
+    })
   </script>
 {% endblock %}
