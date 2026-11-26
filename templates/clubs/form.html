@@ -28,7 +28,7 @@
       <div id="board-member-forms" data-prefix="{{ board_formset.prefix }}">
         {% for board_form in board_formset %}
           {% for hidden in board_form.hidden_fields %}{{ hidden }}{% endfor %}
-          <div class="row g-3 align-items-end mb-3">
+          <div class="row g-3 align-items-end mb-3 board-member-row">
             <div class="col-md-6">
               <label class="form-label" for="{{ board_form.member.id_for_label }}">Membre</label>
               {{ board_form.member }}
@@ -36,26 +36,38 @@
                 <div class="text-danger small">{{ error }}</div>
               {% endfor %}
             </div>
-            <div class="col-md-6">
+            <div class="col-md-5">
               <label class="form-label" for="{{ board_form.board_role.id_for_label }}">Poste</label>
               {{ board_form.board_role }}
               {% for error in board_form.board_role.errors %}
                 <div class="text-danger small">{{ error }}</div>
               {% endfor %}
             </div>
+            <div class="col-auto">
+              {{ board_form.DELETE.as_hidden }}
+              <button class="btn btn-outline-danger board-member-remove" type="button">
+                Supprimer
+              </button>
+            </div>
           </div>
         {% endfor %}
       </div>
       <template id="empty-board-member-form">
         {% with board_form=board_formset.empty_form %}
-          <div class="row g-3 align-items-end mb-3">
+          <div class="row g-3 align-items-end mb-3 board-member-row">
             <div class="col-md-6">
               <label class="form-label" for="{{ board_form.member.id_for_label }}">Membre</label>
               {{ board_form.member }}
             </div>
-            <div class="col-md-6">
+            <div class="col-md-5">
               <label class="form-label" for="{{ board_form.board_role.id_for_label }}">Poste</label>
               {{ board_form.board_role }}
+            </div>
+            <div class="col-auto">
+              {{ board_form.DELETE.as_hidden }}
+              <button class="btn btn-outline-danger board-member-remove" type="button">
+                Supprimer
+              </button>
             </div>
           </div>
         {% endwith %}
@@ -83,6 +95,15 @@
 
       container.insertAdjacentHTML("beforeend", newForm);
       totalForms.value = newIndex + 1;
+    });
+
+    document.getElementById("board-member-forms").addEventListener("click", function (event) {
+      const removeButton = event.target.closest(".board-member-remove");
+      if (!removeButton) return;
+
+      const row = removeButton.closest(".board-member-row");
+      row.querySelector('input[name$="-DELETE"]').value = "on";
+      row.classList.add("d-none");
     });
   </script>
 {% endblock %}
